@@ -22,6 +22,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+
 /**
  * Unit tests for CacheConfig.
  *
@@ -30,247 +31,266 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class CacheConfigTest {
 
+    /** The annotation metadata. */
     @Mock
     private AnnotationMetadata annotationMetadata;
 
+    /** The cache config. */
     private CacheConfig cacheConfig;
 
+    /**
+     * Sets the up.
+     */
     @BeforeEach
     void setUp() {
         cacheConfig = new CacheConfig();
     }
 
-    // ========== Bean Creation Tests ==========
-
-    @Test
+    /**
+     * Redis health checker should create instance.
+     */
+    @SuppressWarnings("unchecked")
+	@Test
     void redisHealthChecker_ShouldCreateInstance() {
-        // Given
         RedisTemplate<String, Object> mockRedisTemplate = mock(RedisTemplate.class);
 
-        // When
         RedisHealthChecker result = cacheConfig.redisHealthChecker(mockRedisTemplate);
 
-        // Then
         assertNotNull(result);
         assertInstanceOf(RedisHealthChecker.class, result);
     }
 
-    @Test
+    /**
+     * Redis cache service should create instance.
+     */
+    @SuppressWarnings("unchecked")
+	@Test
     void redisCacheService_ShouldCreateInstance() {
-        // Given
         RedisTemplate<String, Object> mockRedisTemplate = mock(RedisTemplate.class);
 
-        // When
         RedisCacheService result = cacheConfig.redisCacheService(mockRedisTemplate);
 
-        // Then
         assertNotNull(result);
         assertInstanceOf(RedisCacheService.class, result);
     }
 
+    /**
+     * Cache operation builder factory should create instance.
+     */
     @Test
     void cacheOperationBuilderFactory_ShouldCreateInstance() {
-        // Given
         RedisCacheService mockCacheService = mock(RedisCacheService.class);
 
-        // When
         CacheOperationBuilder.Factory result = cacheConfig.cacheOperationBuilderFactory(mockCacheService);
 
-        // Then
         assertNotNull(result);
         assertInstanceOf(CacheOperationBuilder.Factory.class, result);
     }
 
+    /**
+     * Cache operation builder factory should create new builder instances.
+     */
     @Test
     void cacheOperationBuilderFactory_ShouldCreateNewBuilderInstances() {
-        // Given
         RedisCacheService mockCacheService = mock(RedisCacheService.class);
         CacheOperationBuilder.Factory factory = cacheConfig.cacheOperationBuilderFactory(mockCacheService);
 
-        // When
         CacheOperationBuilder<String> builder1 = factory.create();
         CacheOperationBuilder<String> builder2 = factory.create();
 
-        // Then
         assertNotNull(builder1);
         assertNotNull(builder2);
         assertNotSame(builder1, builder2, "Factory should create new instances");
     }
 
-    // ========== SetImportMetadata Tests ==========
 
+
+    /**
+     * Sets the import metadata should set attributes.
+     */
     @Test
     void setImportMetadata_ShouldSetAttributes() {
-        // Given
         Map<String, Object> attributesMap = createBasicAttributesMap();
         when(annotationMetadata.getAnnotationAttributes(EnableRedisLibrary.class.getName()))
                 .thenReturn(attributesMap);
 
-        // When & Then
         assertDoesNotThrow(() -> cacheConfig.setImportMetadata(annotationMetadata));
         verify(annotationMetadata).getAnnotationAttributes(EnableRedisLibrary.class.getName());
     }
 
-    // ========== Connection Factory Tests ==========
+    
 
+    /**
+     * Creates the redis connection factory with standalone mode should create standalone factory.
+     */
     @Test
     void createRedisConnectionFactory_WithStandaloneMode_ShouldCreateStandaloneFactory() {
-        // Given
         setupStandaloneConfiguration();
 
-        // When
         RedisConnectionFactory factory = cacheConfig.createRedisConnectionFactory();
 
-        // Then
         assertNotNull(factory);
     }
 
+    /**
+     * Creates the redis connection factory with cluster mode should create cluster factory.
+     */
     @Test
     void createRedisConnectionFactory_WithClusterMode_ShouldCreateClusterFactory() {
-        // Given
         setupClusterConfiguration();
 
-        // When
         RedisConnectionFactory factory = cacheConfig.createRedisConnectionFactory();
 
-        // Then
         assertNotNull(factory);
     }
 
+    /**
+     * Creates the redis connection factory with credentials should configure auth.
+     */
     @Test
     void createRedisConnectionFactory_WithCredentials_ShouldConfigureAuth() {
-        // Given
         setupStandaloneConfigurationWithCredentials();
 
-        // When
         RedisConnectionFactory factory = cacheConfig.createRedisConnectionFactory();
 
-        // Then
         assertNotNull(factory);
     }
 
+    /**
+     * Creates the cluster config with credentials should configure auth.
+     */
     @Test
     void createClusterConfig_WithCredentials_ShouldConfigureAuth() {
-        // Given
         setupClusterConfigurationWithCredentials();
 
-        // When
         RedisConnectionFactory factory = cacheConfig.createRedisConnectionFactory();
 
-        // Then
         assertNotNull(factory);
     }
 
-    // ========== Redis Template Tests ==========
+    
 
+    /**
+     * Creates the redis template should create configured template.
+     */
     @Test
     void createRedisTemplate_ShouldCreateConfiguredTemplate() {
-        // Given
         setupStandaloneConfiguration();
 
-        // When
         RedisTemplate<String, ?> template = cacheConfig.createRedisTemplate();
 
-        // Then
         assertNotNull(template);
         assertNotNull(template.getConnectionFactory());
     }
 
-    // ========== Cache Manager Tests ==========
 
+
+    /**
+     * Cache manager should create cache manager.
+     */
     @Test
     void cacheManager_ShouldCreateCacheManager() {
-        // Given
         setupStandaloneConfigurationWithTTL();
 
-        // When
         CacheManager cacheManager = cacheConfig.cacheManager();
 
-        // Then
         assertNotNull(cacheManager);
     }
 
-    // ========== Validation Tests ==========
+   
 
+    /**
+     * Validate hosts with null list should throw exception.
+     */
     @Test
     void validateHosts_WithNullList_ShouldThrowException() {
-        // Given
         setupConfigurationWithNullHosts();
 
-        // When & Then
         Exception exception = assertThrows(Exception.class,
                 () -> cacheConfig.createRedisConnectionFactory());
         assertNotNull(exception);
     }
 
+    /**
+     * Validate hosts with empty list should throw exception.
+     */
     @Test
     void validateHosts_WithEmptyList_ShouldThrowException() {
-        // Given
         setupConfigurationWithEmptyHosts();
 
-        // When & Then
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
                 () -> cacheConfig.createRedisConnectionFactory());
         assertTrue(exception.getMessage().contains("At least one host must be configured"));
     }
 
+    /**
+     * Validate hosts with empty host name should throw exception.
+     */
     @Test
     void validateHosts_WithEmptyHostName_ShouldThrowException() {
-        // Given
         setupConfigurationWithEmptyHostName();
 
-        // When & Then
+        
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
                 () -> cacheConfig.createRedisConnectionFactory());
         assertTrue(exception.getMessage().contains("Host name cannot be empty"));
     }
 
+    /**
+     * Validate hosts with invalid port low should throw exception.
+     */
     @Test
     void validateHosts_WithInvalidPortLow_ShouldThrowException() {
-        // Given
         setupConfigurationWithInvalidPort(0);
 
-        // When & Then
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
                 () -> cacheConfig.createRedisConnectionFactory());
         assertTrue(exception.getMessage().contains("Invalid port"));
     }
 
+    /**
+     * Validate hosts with invalid port high should throw exception.
+     */
     @Test
     void validateHosts_WithInvalidPortHigh_ShouldThrowException() {
-        // Given
         setupConfigurationWithInvalidPort(65536);
 
-        // When & Then
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
                 () -> cacheConfig.createRedisConnectionFactory());
         assertTrue(exception.getMessage().contains("Invalid port"));
     }
 
+    /**
+     * Validate standalone hosts with multiple hosts should throw exception.
+     */
     @Test
     void validateStandaloneHosts_WithMultipleHosts_ShouldThrowException() {
-        // Given
         setupConfigurationWithMultipleHostsStandalone();
 
-        // When & Then
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
                 () -> cacheConfig.createRedisConnectionFactory());
         assertTrue(exception.getMessage().contains("Standalone mode requires exactly one host entry"));
     }
 
+    /**
+     * Validate cluster hosts with single host should throw exception.
+     */
     @Test
     void validateClusterHosts_WithSingleHost_ShouldThrowException() {
-        // Given
         setupConfigurationWithSingleHostCluster();
 
-        // When & Then
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
                 () -> cacheConfig.createRedisConnectionFactory());
         assertTrue(exception.getMessage().contains("Cluster mode requires host entries for proper redundancy"));
     }
 
-    // ========== Helper Methods ==========
+    
 
+    /**
+     * Creates the basic attributes map.
+     *
+     * @return the map
+     */
     private Map<String, Object> createBasicAttributesMap() {
         Map<String, Object> map = new HashMap<>();
         map.put("mode", Mode.STANDALONE);
@@ -293,6 +313,9 @@ class CacheConfigTest {
         return map;
     }
 
+    /**
+     * Setup standalone configuration.
+     */
     private void setupStandaloneConfiguration() {
         Map<String, Object> attributesMap = createBasicAttributesMap();
 
@@ -305,6 +328,9 @@ class CacheConfigTest {
         cacheConfig.setImportMetadata(annotationMetadata);
     }
 
+    /**
+     * Setup cluster configuration.
+     */
     private void setupClusterConfiguration() {
         Map<String, Object> attributesMap = createBasicAttributesMap();
         attributesMap.put("mode", Mode.CLUSTER);
@@ -328,6 +354,9 @@ class CacheConfigTest {
         cacheConfig.setImportMetadata(annotationMetadata);
     }
 
+    /**
+     * Setup standalone configuration with TTL.
+     */
     private void setupStandaloneConfigurationWithTTL() {
         Map<String, Object> attributesMap = createBasicAttributesMap();
 
@@ -344,6 +373,9 @@ class CacheConfigTest {
         cacheConfig.setImportMetadata(annotationMetadata);
     }
 
+    /**
+     * Setup configuration with null hosts.
+     */
     private void setupConfigurationWithNullHosts() {
         Map<String, Object> attributesMap = createBasicAttributesMap();
         attributesMap.put("hostEntries", null);
@@ -354,6 +386,9 @@ class CacheConfigTest {
         cacheConfig.setImportMetadata(annotationMetadata);
     }
 
+    /**
+     * Setup configuration with empty hosts.
+     */
     private void setupConfigurationWithEmptyHosts() {
         Map<String, Object> attributesMap = createBasicAttributesMap();
 
@@ -365,6 +400,9 @@ class CacheConfigTest {
         cacheConfig.setImportMetadata(annotationMetadata);
     }
 
+    /**
+     * Setup configuration with empty host name.
+     */
     private void setupConfigurationWithEmptyHostName() {
         Map<String, Object> attributesMap = createBasicAttributesMap();
 
@@ -381,6 +419,11 @@ class CacheConfigTest {
         cacheConfig.setImportMetadata(annotationMetadata);
     }
 
+    /**
+     * Sets the up configuration with invalid port.
+     *
+     * @param port the new up configuration with invalid port
+     */
     private void setupConfigurationWithInvalidPort(int port) {
         Map<String, Object> attributesMap = createBasicAttributesMap();
 
@@ -398,6 +441,9 @@ class CacheConfigTest {
         cacheConfig.setImportMetadata(annotationMetadata);
     }
 
+    /**
+     * Setup configuration with multiple hosts standalone.
+     */
     private void setupConfigurationWithMultipleHostsStandalone() {
         Map<String, Object> attributesMap = createBasicAttributesMap();
         attributesMap.put("mode", Mode.STANDALONE);
@@ -421,6 +467,9 @@ class CacheConfigTest {
         cacheConfig.setImportMetadata(annotationMetadata);
     }
 
+    /**
+     * Setup configuration with single host cluster.
+     */
     private void setupConfigurationWithSingleHostCluster() {
         Map<String, Object> attributesMap = createBasicAttributesMap();
         attributesMap.put("mode", Mode.CLUSTER);
@@ -431,6 +480,9 @@ class CacheConfigTest {
         cacheConfig.setImportMetadata(annotationMetadata);
     }
 
+    /**
+     * Setup standalone configuration with credentials.
+     */
     private void setupStandaloneConfigurationWithCredentials() {
         Map<String, Object> attributesMap = createBasicAttributesMap();
 
@@ -443,6 +495,9 @@ class CacheConfigTest {
         cacheConfig.setImportMetadata(annotationMetadata);
     }
 
+    /**
+     * Setup cluster configuration with credentials.
+     */
     private void setupClusterConfigurationWithCredentials() {
         Map<String, Object> attributesMap = createBasicAttributesMap();
         attributesMap.put("mode", Mode.CLUSTER);
@@ -468,8 +523,11 @@ class CacheConfigTest {
         cacheConfig.setImportMetadata(annotationMetadata);
     }
 
-    // ========== Sentinel Mode Tests ==========
+    
 
+    /**
+     * Creates the redis connection factory with sentinel mode should create sentinel configuration.
+     */
     @Test
     void createRedisConnectionFactory_WithSentinelMode_ShouldCreateSentinelConfiguration() {
         // Given
@@ -482,6 +540,9 @@ class CacheConfigTest {
         assertNotNull(result);
     }
 
+    /**
+     * Creates the redis connection factory with sentinel mode and credentials should configure credentials.
+     */
     @Test
     void createRedisConnectionFactory_WithSentinelModeAndCredentials_ShouldConfigureCredentials() {
         // Given
@@ -494,6 +555,9 @@ class CacheConfigTest {
         assertNotNull(result);
     }
 
+    /**
+     * Creates the sentinel config without sentinel master should throw exception.
+     */
     @Test
     void createSentinelConfig_WithoutSentinelMaster_ShouldThrowException() {
         // Given
@@ -508,6 +572,9 @@ class CacheConfigTest {
         assertTrue(exception.getMessage().contains("sentinelMaster"));
     }
 
+    /**
+     * Creates the sentinel config with empty sentinel master should throw exception.
+     */
     @Test
     void createSentinelConfig_WithEmptySentinelMaster_ShouldThrowException() {
         // Given
@@ -521,6 +588,9 @@ class CacheConfigTest {
                 exception.getMessage());
     }
 
+    /**
+     * Creates the sentinel config with valid configuration should create configuration.
+     */
     @Test
     void createSentinelConfig_WithValidConfiguration_ShouldCreateConfiguration() {
         // Given
@@ -535,6 +605,9 @@ class CacheConfigTest {
 
     // ========== Sentinel Helper Methods ==========
 
+    /**
+     * Setup sentinel configuration.
+     */
     private void setupSentinelConfiguration() {
         Map<String, Object> attributesMap = createBasicAttributesMap();
         attributesMap.put("mode", Mode.SENTINEL);
@@ -564,6 +637,9 @@ class CacheConfigTest {
         cacheConfig.setImportMetadata(annotationMetadata);
     }
 
+    /**
+     * Setup sentinel configuration with credentials.
+     */
     private void setupSentinelConfigurationWithCredentials() {
         Map<String, Object> attributesMap = createBasicAttributesMap();
         attributesMap.put("mode", Mode.SENTINEL);
@@ -595,6 +671,9 @@ class CacheConfigTest {
         cacheConfig.setImportMetadata(annotationMetadata);
     }
 
+    /**
+     * Setup sentinel configuration without master.
+     */
     private void setupSentinelConfigurationWithoutMaster() {
         Map<String, Object> attributesMap = createBasicAttributesMap();
         attributesMap.put("mode", Mode.SENTINEL);
@@ -619,10 +698,13 @@ class CacheConfigTest {
         cacheConfig.setImportMetadata(annotationMetadata);
     }
 
+    /**
+     * Setup sentinel configuration with empty master.
+     */
     private void setupSentinelConfigurationWithEmptyMaster() {
         Map<String, Object> attributesMap = createBasicAttributesMap();
         attributesMap.put("mode", Mode.SENTINEL);
-        attributesMap.put("sentinelMaster", "");  // Empty string
+        attributesMap.put("sentinelMaster", "");
 
         AnnotationAttributes[] hostEntries = new AnnotationAttributes[2];
         AnnotationAttributes hostEntry1 = new AnnotationAttributes();

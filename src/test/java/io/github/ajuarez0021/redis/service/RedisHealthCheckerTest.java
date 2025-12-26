@@ -26,26 +26,39 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class RedisHealthCheckerTest {
 
+    /** The connection factory. */
     @Mock
     private RedisConnectionFactory connectionFactory;
 
+    /** The connection. */
     @Mock
     private RedisConnection connection;
 
+    /** The server commands. */
     @Mock
     private RedisServerCommands serverCommands;
 
+    /** The redis template. */
     @Mock
     private RedisTemplate<String, Object> redisTemplate;
 
+    /** The health checker. */
     @InjectMocks
     private RedisHealthChecker healthChecker;
 
+    /**
+     * Sets the up.
+     */
     @BeforeEach
     void setUp() {
         lenient().when(redisTemplate.getConnectionFactory()).thenReturn(connectionFactory);
     }
 
+    /**
+     * Creates the mock redis info.
+     *
+     * @return the properties
+     */
     private Properties createMockRedisInfo() {
         Properties properties = new Properties();
         properties.setProperty("used_memory", "1048576");
@@ -55,55 +68,54 @@ class RedisHealthCheckerTest {
         return properties;
     }
 
-    // ========== Successful Health Check Tests ==========
-
+   
+    /**
+     * Checks if is redis active when redis is up should return connected true.
+     */
     @Test
     void isRedisActive_WhenRedisIsUp_ShouldReturnConnectedTrue() {
-        // Given
         when(connectionFactory.getConnection()).thenReturn(connection);
         when(connection.ping()).thenReturn("PONG");
         when(connection.serverCommands()).thenReturn(serverCommands);
         when(serverCommands.info()).thenReturn(createMockRedisInfo());
 
-        // When
         RedisStatusDto result = healthChecker.isRedisActive();
 
-        // Then
         assertNotNull(result);
         assertTrue(result.isConnected());
         verify(connection).ping();
         verify(connection).serverCommands();
     }
 
+    /**
+     * Checks if is redis active when redis is up should measure response time.
+     */
     @Test
     void isRedisActive_WhenRedisIsUp_ShouldMeasureResponseTime() {
-        // Given
         when(connectionFactory.getConnection()).thenReturn(connection);
         when(connection.ping()).thenReturn("PONG");
         when(connection.serverCommands()).thenReturn(serverCommands);
         when(serverCommands.info()).thenReturn(createMockRedisInfo());
 
-        // When
         RedisStatusDto result = healthChecker.isRedisActive();
 
-        // Then
         assertNotNull(result);
         assertTrue(result.isConnected());
         assertTrue(result.getResponseTime() >= 0, "Response time should be non-negative");
     }
 
+    /**
+     * Checks if is redis active when ping succeeds should return success message.
+     */
     @Test
     void isRedisActive_WhenPingSucceeds_ShouldReturnSuccessMessage() {
-        // Given
         when(connectionFactory.getConnection()).thenReturn(connection);
         when(connection.ping()).thenReturn("PONG");
         when(connection.serverCommands()).thenReturn(serverCommands);
         when(serverCommands.info()).thenReturn(createMockRedisInfo());
 
-        // When
         RedisStatusDto result = healthChecker.isRedisActive();
 
-        // Then
         assertNotNull(result);
         assertTrue(result.isConnected());
         assertNotNull(result.getErrorMessage());
@@ -113,142 +125,141 @@ class RedisHealthCheckerTest {
                 "Message should indicate successful connection");
     }
 
-    // ========== Failed Health Check Tests ==========
-
+    /**
+     * Checks if is redis active when redis template is null should return not connected.
+     */
     @Test
     void isRedisActive_WhenRedisTemplateIsNull_ShouldReturnNotConnected() {
-        // Given
         RedisHealthChecker checkerWithNullTemplate = new RedisHealthChecker(null);
 
-        // When
         RedisStatusDto result = checkerWithNullTemplate.isRedisActive();
 
-        // Then
         assertNotNull(result);
         assertFalse(result.isConnected());
         assertTrue(result.getErrorMessage().contains("not configured"));
     }
 
+    /**
+     * Checks if is redis active when connection factory is null should return not connected.
+     */
     @Test
     void isRedisActive_WhenConnectionFactoryIsNull_ShouldReturnNotConnected() {
-        // Given
         when(redisTemplate.getConnectionFactory()).thenReturn(null);
 
-        // When
         RedisStatusDto result = healthChecker.isRedisActive();
 
-        // Then
         assertNotNull(result);
         assertFalse(result.isConnected());
         assertTrue(result.getErrorMessage().contains("not available"));
     }
 
-    @Test
+    /**
+     * Checks if is redis active when redis is down should return connected false.
+     */
+    @SuppressWarnings("serial")
+	@Test
     void isRedisActive_WhenRedisIsDown_ShouldReturnConnectedFalse() {
-        // Given
         when(connectionFactory.getConnection()).thenThrow(new DataAccessException("Connection refused") {});
 
-        // When
         RedisStatusDto result = healthChecker.isRedisActive();
 
-        // Then
         assertNotNull(result);
         assertFalse(result.isConnected());
     }
 
-    @Test
+    /**
+     * Checks if is redis active when redis is down should include error message.
+     */
+    @SuppressWarnings("serial")
+	@Test
     void isRedisActive_WhenRedisIsDown_ShouldIncludeErrorMessage() {
-        // Given
         String errorMessage = "Connection refused";
         when(connectionFactory.getConnection()).thenThrow(new DataAccessException(errorMessage) {});
 
-        // When
         RedisStatusDto result = healthChecker.isRedisActive();
 
-        // Then
         assertNotNull(result);
         assertFalse(result.isConnected());
         assertNotNull(result.getErrorMessage());
         assertTrue(result.getErrorMessage().contains("Error checking Redis status"));
     }
 
-    @Test
+    /**
+     * Checks if is redis active when exception thrown should return zero response time.
+     */
+    @SuppressWarnings("serial")
+	@Test
     void isRedisActive_WhenExceptionThrown_ShouldReturnZeroResponseTime() {
-        // Given
         when(connectionFactory.getConnection()).thenThrow(new DataAccessException("Connection error") {});
 
-        // When
         RedisStatusDto result = healthChecker.isRedisActive();
 
-        // Then
         assertNotNull(result);
         assertFalse(result.isConnected());
         assertEquals(0L, result.getResponseTime());
     }
 
+    /**
+     * Checks if is redis active when ping returns non pong should return not connected.
+     */
     @Test
     void isRedisActive_WhenPingReturnsNonPong_ShouldReturnNotConnected() {
-        // Given
         when(connectionFactory.getConnection()).thenReturn(connection);
         when(connection.ping()).thenReturn("INVALID");
         when(connection.serverCommands()).thenReturn(serverCommands);
         when(serverCommands.info()).thenReturn(createMockRedisInfo());
 
-        // When
         RedisStatusDto result = healthChecker.isRedisActive();
 
-        // Then
         assertNotNull(result);
         assertFalse(result.isConnected());
         assertTrue(result.getErrorMessage().contains("not responding as expected"));
     }
 
-    // ========== Edge Cases ==========
-
+    /**
+     * Checks if is redis active when ping returns null should handle gracefully.
+     */
     @Test
     void isRedisActive_WhenPingReturnsNull_ShouldHandleGracefully() {
-        // Given
         when(connectionFactory.getConnection()).thenReturn(connection);
         when(connection.ping()).thenReturn(null);
         when(connection.serverCommands()).thenReturn(serverCommands);
         when(serverCommands.info()).thenReturn(createMockRedisInfo());
 
-        // When
         RedisStatusDto result = healthChecker.isRedisActive();
 
-        // Then
         assertNotNull(result);
         assertFalse(result.isConnected());
     }
 
+    /**
+     * Checks if is redis active when ping returns empty string should handle gracefully.
+     */
     @Test
     void isRedisActive_WhenPingReturnsEmptyString_ShouldHandleGracefully() {
-        // Given
         when(connectionFactory.getConnection()).thenReturn(connection);
         when(connection.ping()).thenReturn("");
         when(connection.serverCommands()).thenReturn(serverCommands);
         when(serverCommands.info()).thenReturn(createMockRedisInfo());
 
-        // When
         RedisStatusDto result = healthChecker.isRedisActive();
 
-        // Then
         assertNotNull(result);
         assertFalse(result.isConnected());
     }
 
+    /**
+     * Checks if is redis active when ping returns pong lowercase should return connected.
+     */
     @Test
     void isRedisActive_WhenPingReturnsPongLowercase_ShouldReturnConnected() {
-        // Given
         when(connectionFactory.getConnection()).thenReturn(connection);
         when(connection.ping()).thenReturn("pong");
         when(connection.serverCommands()).thenReturn(serverCommands);
         when(serverCommands.info()).thenReturn(createMockRedisInfo());
 
-        // When
         RedisStatusDto result = healthChecker.isRedisActive();
 
-        // Then
         assertNotNull(result);
         assertTrue(result.isConnected());
     }

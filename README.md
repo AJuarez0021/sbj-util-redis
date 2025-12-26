@@ -2,7 +2,7 @@
 
 A powerful and flexible Spring Boot utility library for Redis integration, providing simplified cache operations, health checking, and advanced configuration options.
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Features](#-features)
 - [Requirements](#-requirements)
@@ -20,7 +20,7 @@ A powerful and flexible Spring Boot utility library for Redis integration, provi
 - [Troubleshooting](#-troubleshooting)
 - [License](#-license)
 
-## ✨ Features
+## Features
 
 - **Simple Integration**: Enable Redis with a single annotation
 - **Flexible Configuration**: Support for Standalone, Cluster, and Sentinel modes
@@ -35,13 +35,13 @@ A powerful and flexible Spring Boot utility library for Redis integration, provi
 - **Error Handling**: Graceful error handling with fallback mechanisms
 - **High Test Coverage**: 85%+ code coverage with comprehensive unit tests
 
-## 📦 Requirements
+## Requirements
 
 - Java 21 or higher
 - Spring Boot 4.0.1 or higher
-- Redis Server (Standalone or Cluster)
+- Redis Server (Standalone, Sentinel or Cluster)
 
-## 🚀 Installation
+## Installation
 
 Add the dependency to your `pom.xml`:
 
@@ -53,7 +53,7 @@ Add the dependency to your `pom.xml`:
 </dependency>
 ```
 
-## 🎯 Quick Start
+## Quick Start
 
 ### 1. Enable Redis Library
 
@@ -105,7 +105,7 @@ public class UserService {
 }
 ```
 
-## ⚙️ Configuration
+## Configuration
 
 ### Annotation Parameters
 
@@ -248,7 +248,7 @@ Then reference it in the annotation:
 )
 ```
 
-## 📖 Usage
+## Usage
 
 ### Basic Cache Operations
 
@@ -403,7 +403,7 @@ The health checker provides comprehensive metrics including:
 - **connectedClients**: Number of connected clients
 - **redisVersion**: Redis server version
 
-## 🔒 Security
+## Security
 
 ### SSL/TLS Encryption
 
@@ -445,19 +445,19 @@ The library includes comprehensive validation for all inputs:
 
 **Example Validation Errors:**
 ```java
-// ❌ Invalid - will throw IllegalArgumentException
+// Invalid - will throw IllegalArgumentException
 cacheService.cacheable("test:cache", "key", loader, ttl);
 // Error: cacheName cannot contain ':' or '*' characters
 
-// ❌ Invalid - will throw IllegalArgumentException
+// Invalid - will throw IllegalArgumentException
 cacheService.cacheable("cache", "key*", loader, ttl);
 // Error: key cannot contain '*' character
 
-// ❌ Invalid - will throw IllegalArgumentException
+// Invalid - will throw IllegalArgumentException
 cacheService.cacheable("cache", "key", loader, Duration.ZERO);
 // Error: ttl must be positive
 
-// ✅ Valid
+// Valid
 cacheService.cacheable("cache", "key", loader, Duration.ofMinutes(10));
 ```
 
@@ -470,25 +470,25 @@ The library implements graceful error handling:
 - **Detailed Logging**: All errors are logged with context information
 - **Health Checks**: Use `RedisHealthChecker` to monitor connectivity
 
-## 🔐 Thread Safety
+## Thread Safety
 
-### ✅ Fully Thread-Safe Design
+### Fully Thread-Safe Design
 
 All components are designed for **safe concurrent access** in multi-threaded environments:
 
 | Component | Thread Safety | Scope | Notes |
-|-----------|--------------|-------|-------|
-| `RedisCacheService` | ✅ Thread-Safe | Singleton | Immutable state, safe for concurrent use |
-| `RedisHealthChecker` | ✅ Thread-Safe | Singleton | Immutable state, safe for concurrent use |
-| `CacheOperationBuilder.Factory` | ✅ Thread-Safe | Singleton | Factory creates new builders safely |
-| `CacheOperationBuilder` | ⚠️ Not Thread-Safe | Per-operation | Use factory.create() each time |
-| `RedisTemplate` | ✅ Thread-Safe | Singleton | Spring managed, connection pooled |
+|-----------|-------------|-------|-------|
+| `RedisCacheService` | Thread-Safe | Singleton | Immutable state, safe for concurrent use |
+| `RedisHealthChecker` | Thread-Safe | Singleton | Immutable state, safe for concurrent use |
+| `CacheOperationBuilder.Factory` | Thread-Safe | Singleton | Factory creates new builders safely |
+| `CacheOperationBuilder` | Not Thread-Safe | Per-operation | Use factory.create() each time |
+| `RedisTemplate` | Thread-Safe | Singleton | Spring managed, connection pooled |
 
 ### CacheOperationBuilder - Factory Pattern
 
-**⚠️ Important:** The `CacheOperationBuilder` itself is NOT thread-safe and should not be shared across threads. Always create a new instance for each operation using the factory.
+**Important:** The `CacheOperationBuilder` itself is NOT thread-safe and should not be shared across threads. Always create a new instance for each operation using the factory.
 
-**✅ Correct Usage:**
+**Correct Usage:**
 ```java
 @Service
 public class UserService {
@@ -507,7 +507,7 @@ public class UserService {
 }
 ```
 
-**❌ Incorrect Usage:**
+**Incorrect Usage:**
 ```java
 @Service
 public class UserService {
@@ -523,7 +523,7 @@ public class UserService {
     }
 
     public User getUser(String userId) {
-        // ❌ UNSAFE - Multiple threads will share the same builder
+        // UNSAFE - Multiple threads will share the same builder
         return reusedBuilder
             .cacheName("users")
             .key(userId)
@@ -534,10 +534,10 @@ public class UserService {
 ```
 
 **Key Points:**
-- ✅ Factory is thread-safe and can be injected as singleton
-- ✅ Call `factory.create()` for each cache operation
-- ✅ Each builder instance is isolated and independent
-- ❌ Never store and reuse builder instances across requests
+- Factory is thread-safe and can be injected as singleton
+- Call `factory.create()` for each cache operation
+- Each builder instance is isolated and independent
+- Never store and reuse builder instances across requests
 
 ### Why This Design Is Thread-Safe
 
@@ -547,7 +547,7 @@ public class UserService {
 4. **Connection Pooling**: RedisTemplate manages thread-safe connections
 5. **No Shared State**: Each builder operates independently
 
-## 📚 API Reference
+## API Reference
 
 ### RedisCacheService
 
@@ -582,7 +582,7 @@ public class UserService {
 | `connectedClients` | int | Number of connected clients |
 | `redisVersion` | String | Redis server version |
 
-## 💡 Examples
+## Examples
 
 ### Example 1: E-commerce Product Cache
 
@@ -701,7 +701,7 @@ public class HealthController {
 }
 ```
 
-## 🏗️ Architecture
+## Architecture
 
 ### Key Components
 
@@ -728,7 +728,7 @@ The library uses Jackson for JSON serialization with the following default confi
 - Ignores unknown properties
 - Handles empty beans gracefully
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -749,7 +749,7 @@ Check health endpoint: /api/health/redis
 Review logs for connection errors
 ```
 
-## 📄 License
+## License
 
 This project is licensed under the Apache License, Version 2.0.
 
@@ -769,22 +769,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-## 👤 Author
+## Author
 
 **AJuarez** (ajuarez0021)
 - Email: programacion0025@gmail.com
 - GitHub: [@ajuarez0021](https://github.com/ajuarez0021)
 
-## 🤝 Contributing
+## Contributing
 
 Contributions, issues, and feature requests are welcome!
 
-## 📊 Project Stats
+## Project Stats
 
 - **Test Coverage**: 85%+ code coverage
 - **Total Tests**: 115 unit tests
-- **Build Status**: All tests passing ✅
-- **Thread Safety**: Fully verified ✅
+- **Build Status**: All tests passing
+- **Thread Safety**: Fully verified
 - **Supported Modes**: Standalone, Cluster, Sentinel
 - **Java Version**: 21
 - **Spring Boot**: 4.0.1
