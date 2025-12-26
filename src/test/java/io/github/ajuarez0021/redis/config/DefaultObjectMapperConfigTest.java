@@ -198,7 +198,7 @@ class DefaultObjectMapperConfigTest {
     @Test
     void configure_ShouldHandleJavaTimeTypes() throws Exception {
         ObjectMapper mapper = config.configure();
-        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now();
         TimeObject timeObj = new TimeObject(now);
 
         String json = mapper.writeValueAsString(timeObj);
@@ -234,7 +234,9 @@ class DefaultObjectMapperConfigTest {
         /** The value. */
         private int value;
 
-        
+        /** The construct. */
+        public TestObject () {
+        }
 
         /**
          * Instantiates a new test object.
@@ -256,7 +258,10 @@ class DefaultObjectMapperConfigTest {
         /** The timestamp. */
         private LocalDateTime timestamp;
 
-       
+        /** The construct. */
+       public TimeObject() {
+
+       }
 
         /**
          * Instantiates a new time object.
