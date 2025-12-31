@@ -151,7 +151,7 @@ public final class CacheOperationBuilder<T> {
      * @return the t
      */
     public T cacheable() {
-        validateRequiredFields();
+        Validator.validateRequiredFields(cacheName, key, loader);
 
         if (!condition) {
             return loader.get();
@@ -168,20 +168,6 @@ public final class CacheOperationBuilder<T> {
         return result;
     }
 
-    /**
-     * Validate required fields.
-     */
-    private void validateRequiredFields() {
-        if (cacheName == null || cacheName.isEmpty()) {
-            throw new IllegalStateException("cacheName is required");
-        }
-        if (key == null || key.isEmpty()) {
-            throw new IllegalStateException("key is required");
-        }
-        if (loader == null) {
-            throw new IllegalStateException("loader is required");
-        }
-    }
 
     /**
      * Cache put.

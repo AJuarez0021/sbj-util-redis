@@ -4,13 +4,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
+import io.github.ajuarez0021.redis.dto.TypedValueDto;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.SerializationException;
 
 
-// TODO: Auto-generated Javadoc
 /**
  * The Class CustomJackson2JsonRedisSerializer.
  *
@@ -43,7 +41,7 @@ public class CustomJackson2JsonRedisSerializer implements RedisSerializer<Object
             return new byte[0];
         }
         try {
-            TypedValue typedValue = new TypedValue(
+            TypedValueDto typedValue = new TypedValueDto(
                     value.getClass().getName(),
                     value
             );
@@ -66,7 +64,7 @@ public class CustomJackson2JsonRedisSerializer implements RedisSerializer<Object
             return null;
         }
         try {
-            TypedValue typedValue = objectMapper.readValue(bytes, TypedValue.class);
+            TypedValueDto typedValue = objectMapper.readValue(bytes, TypedValueDto.class);
             Class<?> clazz = Class.forName(typedValue.getType());
             return objectMapper.convertValue(typedValue.getValue(), clazz);
         } catch (IOException | ClassNotFoundException e) {
@@ -74,17 +72,5 @@ public class CustomJackson2JsonRedisSerializer implements RedisSerializer<Object
         }
     }
 
-    /**
-     * The Class TypedValue.
-     */
-    @Data
-    @AllArgsConstructor
-    private static class TypedValue {
-        
-        /** The type. */
-        private String type;
-        
-        /** The value. */
-        private Object value;
-    }
+
 }

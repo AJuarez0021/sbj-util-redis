@@ -5,6 +5,7 @@ import io.github.ajuarez0021.redis.dto.HostsDto;
 import io.github.ajuarez0021.redis.service.CacheOperationBuilder;
 import io.github.ajuarez0021.redis.service.RedisCacheService;
 import io.github.ajuarez0021.redis.service.RedisHealthChecker;
+import io.github.ajuarez0021.redis.service.Validator;
 import io.github.ajuarez0021.redis.util.Mode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -113,7 +114,7 @@ public class CacheConfig implements ImportAware {
      */
     private RedisStandaloneConfiguration createStandaloneConfig() {
         List<HostsDto> hosts = getHostEntries();
-        validateStandaloneHosts(hosts);
+        Validator.validateStandaloneHosts(hosts);
         HostsDto host = hosts.getFirst();
         RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
         config.setHostName(Objects.requireNonNull(host.getHostName(), "host is required"));
@@ -129,78 +130,7 @@ public class CacheConfig implements ImportAware {
         return config;
     }
 
-    /**
-     * Validate hosts.
-     *
-     * @param hosts the hosts
-     */
-    private void validateHosts(List<HostsDto> hosts) {
-        if (hosts == null || hosts.isEmpty()) {
-            throw new IllegalArgumentException("At least one host must be configured");
-        }
-        for (HostsDto host : hosts) {
-            if (host.getHostName() == null || host.getHostName().trim().isEmpty()) {
-                throw new IllegalArgumentException("Host name cannot be empty");
-            }
-            if (host.getPort() < 1 || host.getPort() > 65535) {
-                throw new IllegalArgumentException(
-                        String.format("Invalid port %d. Port must be between 1 and 65535", host.getPort())
-                );
-            }
-        }
-    }
 
-    /**
-     * Validate timeout.
-     *
-     * @param connectionTimeout the connection timeout
-     * @param readTimeout       the read timeout
-     */
-    private void validateTimeout(Long connectionTimeout, Long readTimeout) {
-
-        Objects.requireNonNull(connectionTimeout, "Connection timeout cannot be null");
-        Objects.requireNonNull(readTimeout, "Read timeout cannot be null");
-
-        if (connectionTimeout < 1) {
-            throw new IllegalArgumentException(
-                    String.format("Invalid connectionTimeout %d.", connectionTimeout)
-            );
-        }
-        if (readTimeout < 1) {
-            throw new IllegalArgumentException(
-                    String.format("Invalid readTimeout %d.", readTimeout)
-            );
-        }
-    }
-
-    /**
-     * Validate standalone hosts.
-     *
-     * @param hosts the hosts
-     */
-    private void validateStandaloneHosts(List<HostsDto> hosts) {
-        validateHosts(hosts);
-        if (hosts.size() != 1) {
-            throw new IllegalArgumentException(
-                    "Standalone mode requires exactly one host entry"
-            );
-        }
-    }
-
-    /**
-     * Validate cluster hosts.
-     *
-     * @param hosts the hosts
-     */
-    private void validateClusterHosts(List<HostsDto> hosts) {
-        validateHosts(hosts);
-        if (hosts.size() > 1) {
-            return;
-        }
-        throw new IllegalArgumentException(
-                "Cluster mode requires host entries for proper redundancy"
-        );
-    }
 
     /**
      * Creates the cluster config.
@@ -209,7 +139,7 @@ public class CacheConfig implements ImportAware {
      */
     private RedisClusterConfiguration createClusterConfig() {
         List<HostsDto> hosts = getHostEntries();
-        validateClusterHosts(hosts);
+        Validator.validateClusterHosts(hosts);
         List<String> nodes = hosts.stream()
                 .map(h -> String.format("%s:%d", h.getHostName(), h.getPort()))
                 .toList();
@@ -246,7 +176,7 @@ public class CacheConfig implements ImportAware {
                         .master(sentinelMaster);
 
         List<HostsDto> hosts = getHostEntries();
-        validateClusterHosts(hosts);
+        Validator.validateClusterHosts(hosts);
         for (HostsDto host : hosts) {
             sentinelConfig.sentinel(host.getHostName(), host.getPort());
         }
@@ -274,7 +204,7 @@ public class CacheConfig implements ImportAware {
         Long connectionTimeout = attributes.getNumber("connectionTimeout");
         Long readTimeout = attributes.getNumber("readTimeout");
 
-        validateTimeout(connectionTimeout, readTimeout);
+        Validator.validateTimeout(connectionTimeout, readTimeout);
 
         LettuceClientConfiguration.LettuceClientConfigurationBuilder clientConfigurationBuilder =
                 LettuceClientConfiguration
