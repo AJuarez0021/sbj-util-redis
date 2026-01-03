@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.SerializationException;
 
+import java.io.IOException;
+
 
 /**
  * The Class CustomJackson2JsonRedisSerializer.
@@ -65,8 +67,8 @@ public class CustomJackson2JsonRedisSerializer<T> implements RedisSerializer<T> 
             return null;
         }
         try {
-            return objectMapper.convertValue(bytes, type);
-        } catch (IllegalArgumentException e) {
+            return objectMapper.readValue(bytes, type);
+        } catch (IOException e) {
             throw new SerializationException("Error deserializing", e);
         }
     }

@@ -132,9 +132,9 @@ class CustomJackson2JsonRedisSerializerTest {
 	@Test
     void deserialize_WhenIOExceptionOccurs_ShouldThrowSerializationException() throws IOException {
         byte[] bytes = new byte[]{1, 2, 3, 4};
-        IllegalArgumentException exception = new IllegalArgumentException("Read error");
+        IOException exception = new IOException("Read error");
 
-        when(objectMapper.convertValue(eq(bytes), any(Class.class))).thenThrow(exception);
+        when(objectMapper.readValue(eq(bytes), any(Class.class))).thenThrow(exception);
 
         SerializationException  thrown = assertThrows(SerializationException.class,
                 () -> serializer.deserialize(bytes));

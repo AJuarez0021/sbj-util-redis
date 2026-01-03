@@ -73,29 +73,24 @@ public class RedisHealthChecker {
 
                 Properties properties = connection.serverCommands().info();
 
-                if ("PONG".equalsIgnoreCase(pong)) {
-                    log.debug("Redis is up and running and responding correctly");
-                    return RedisStatusDto.builder()
-                            .connected(true)
-                            .errorMessage("Redis is up and running and responding correctly")
-                            .responseTime(endTime)
-                            .usedMemory(Long.parseLong(properties.getProperty("used_memory")))
-                            .maxMemory(Long.parseLong(properties.getProperty("maxmemory")))
-                            .connectedClients(Integer.parseInt(properties.getProperty("connected_clients")))
-                            .redisVersion(properties.getProperty("redis_version"))
-                            .build();
-                } else {
-                    log.warn("Redis is not responding as expected. Response: {}", pong);
-                    return RedisStatusDto.builder()
-                            .connected(false)
-                            .errorMessage("Redis is not responding as expected. Response: " + pong)
-                            .responseTime(endTime)
-                            .usedMemory(Long.parseLong(properties.getProperty("used_memory")))
-                            .maxMemory(Long.parseLong(properties.getProperty("maxmemory")))
-                            .connectedClients(Integer.parseInt(properties.getProperty("connected_clients")))
-                            .redisVersion(properties.getProperty("redis_version"))
-                            .build();
+                boolean connected = "PONG".equalsIgnoreCase(pong);
+                String message = connected
+                        ? "Redis is up and running and responding correctly"
+                        : "Redis is not responding as expected. Response: " + pong;
+
+                if (!connected) {
+                    log.warn(message);
                 }
+
+                return RedisStatusDto.builder()
+                        .connected(connected)
+                        .errorMessage(message)
+                        .responseTime(endTime)
+                        .usedMemory(Long.parseLong(properties.getProperty("used_memory")))
+                        .maxMemory(Long.parseLong(properties.getProperty("maxmemory")))
+                        .connectedClients(Integer.parseInt(properties.getProperty("connected_clients")))
+                        .redisVersion(properties.getProperty("redis_version"))
+                        .build();
             }
 
         } catch (DataAccessException e) {
