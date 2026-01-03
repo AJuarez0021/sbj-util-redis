@@ -5,7 +5,7 @@ import io.github.ajuarez0021.redis.dto.HostsDto;
 import io.github.ajuarez0021.redis.service.CacheOperationBuilder;
 import io.github.ajuarez0021.redis.service.RedisCacheService;
 import io.github.ajuarez0021.redis.service.RedisHealthChecker;
-import io.github.ajuarez0021.redis.service.Validator;
+import io.github.ajuarez0021.redis.util.Validator;
 import io.github.ajuarez0021.redis.util.Mode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -164,19 +164,13 @@ public class CacheConfig implements ImportAware {
     private RedisSentinelConfiguration createSentinelConfig() {
 
         String sentinelMaster = attributes.getString("sentinelMaster");
-
-        if (!StringUtils.hasText(sentinelMaster)) {
-            throw new IllegalArgumentException(
-                    "sentinelMaster must be configured when using SENTINEL mode"
-            );
-        }
+        List<HostsDto> hosts = getHostEntries();
+        Validator.validateSentinelHosts(hosts, sentinelMaster);
 
         RedisSentinelConfiguration sentinelConfig =
                 new RedisSentinelConfiguration()
                         .master(sentinelMaster);
 
-        List<HostsDto> hosts = getHostEntries();
-        Validator.validateClusterHosts(hosts);
         for (HostsDto host : hosts) {
             sentinelConfig.sentinel(host.getHostName(), host.getPort());
         }
@@ -236,6 +230,7 @@ public class CacheConfig implements ImportAware {
      */
     @Bean
     @ConditionalOnMissingBean
+    @SuppressWarnings("unchecked")
     <T> RedisTemplate<String, T> createRedisTemplate() {
         RedisTemplate<String, T> template = new RedisTemplate<>();
         template.setConnectionFactory(createRedisConnectionFactory());
@@ -245,8 +240,8 @@ public class CacheConfig implements ImportAware {
         template.setHashKeySerializer(stringSerializer);
 
         ObjectMapperConfig mapperConfig = getObjectMapperConfig();
-        CustomJackson2JsonRedisSerializer jsonSerializer = new CustomJackson2JsonRedisSerializer(
-                mapperConfig.configure());
+        CustomJackson2JsonRedisSerializer<T> jsonSerializer = new CustomJackson2JsonRedisSerializer<>(
+                mapperConfig.configure(), (Class<T>) Object.class);
         template.setValueSerializer(jsonSerializer);
         template.setHashValueSerializer(jsonSerializer);
 
@@ -301,7 +296,8 @@ public class CacheConfig implements ImportAware {
                 .serializeKeysWith(
                         RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair
-                        .fromSerializer(new CustomJackson2JsonRedisSerializer(mapperConfig.configure())));
+                        .fromSerializer(new CustomJackson2JsonRedisSerializer<>(mapperConfig.configure(),
+                                Object.class)));
 
         AnnotationAttributes[] ttlArray = attributes.getAnnotationArray("ttlEntries");
 

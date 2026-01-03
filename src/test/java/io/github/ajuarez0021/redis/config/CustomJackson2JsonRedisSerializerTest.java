@@ -28,7 +28,7 @@ class CustomJackson2JsonRedisSerializerTest {
     private ObjectMapper objectMapper;
 
     /** The serializer. */
-    private CustomJackson2JsonRedisSerializer serializer;
+    private CustomJackson2JsonRedisSerializer<Object> serializer;
     
 
     /**
@@ -36,7 +36,7 @@ class CustomJackson2JsonRedisSerializerTest {
      */
     @BeforeEach
     void setUp() {
-        serializer = new CustomJackson2JsonRedisSerializer(objectMapper);
+        serializer = new CustomJackson2JsonRedisSerializer<>(objectMapper, Object.class);
     }
 
     
@@ -132,11 +132,11 @@ class CustomJackson2JsonRedisSerializerTest {
 	@Test
     void deserialize_WhenIOExceptionOccurs_ShouldThrowSerializationException() throws IOException {
         byte[] bytes = new byte[]{1, 2, 3, 4};
-        IOException exception = new IOException("Read error");
+        IllegalArgumentException exception = new IllegalArgumentException("Read error");
 
-        when(objectMapper.readValue(eq(bytes), any(Class.class))).thenThrow(exception);
+        when(objectMapper.convertValue(eq(bytes), any(Class.class))).thenThrow(exception);
 
-        SerializationException thrown = assertThrows(SerializationException.class,
+        SerializationException  thrown = assertThrows(SerializationException.class,
                 () -> serializer.deserialize(bytes));
         assertEquals("Error deserializing", thrown.getMessage());
     }

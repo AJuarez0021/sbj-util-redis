@@ -1,5 +1,7 @@
 package io.github.ajuarez0021.redis.service;
 
+import io.github.ajuarez0021.redis.util.Validator;
+
 import java.time.Duration;
 import java.util.function.Consumer;
 import java.util.function.Supplier;

@@ -4,9 +4,10 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+
+import io.github.ajuarez0021.redis.util.Validator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisCallback;
@@ -48,7 +49,7 @@ public class RedisCacheService {
      */
     @SuppressWarnings("unchecked")
     public <T> T cacheable(String cacheName, String key, Supplier<T> loader, Duration ttl) {
-        validateCacheable(cacheName, key, loader, ttl);
+        Validator.validateCacheable(cacheName, key, loader, ttl);
 
         String fullKey = buildKey(cacheName, key);
         try {
@@ -77,54 +78,7 @@ public class RedisCacheService {
         }
     }
 
-    /**
-     * Validate cacheable.
-     *
-     * @param <T> the generic type
-     * @param cacheName the cache name
-     * @param key the key
-     * @param loader the loader
-     * @param ttl the ttl
-     */
-    private<T> void validateCacheable(String cacheName, String key, Supplier<T> loader, Duration ttl) {
-        Objects.requireNonNull(cacheName, "cacheName cannot be null");
-        Objects.requireNonNull(key, "key cannot be null");
-        Objects.requireNonNull(loader, "loader cannot be null");
-        Objects.requireNonNull(ttl, "ttl cannot be null");
 
-        if (cacheName.trim().isEmpty()) {
-            throw new IllegalArgumentException("cacheName cannot be empty");
-        }
-
-        if (key.trim().isEmpty()) {
-            throw new IllegalArgumentException("key cannot be empty");
-        }
-
-        if (ttl.isNegative() || ttl.isZero()) {
-            throw new IllegalArgumentException("ttl must be positive");
-        }
-
-        validateKeyFormat(cacheName, key);
-    }
-
-    /**
-     * Validate key format.
-     *
-     * @param cacheName the cache name
-     * @param key the key
-     */
-    private void validateKeyFormat(String cacheName, String key) {
-        if (cacheName.contains(":") || cacheName.contains("*")) {
-            throw new IllegalArgumentException(
-                    "cacheName cannot contain ':' or '*' characters"
-            );
-        }
-        if (key.contains("*")) {
-            throw new IllegalArgumentException(
-                    "key cannot contain '*' character"
-            );
-        }
-    }
     
     /**
      * Overhead with default TTL of 10 minutes.

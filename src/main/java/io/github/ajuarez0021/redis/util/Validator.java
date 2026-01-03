@@ -1,8 +1,9 @@
-package io.github.ajuarez0021.redis.service;
+package io.github.ajuarez0021.redis.util;
 
 import io.github.ajuarez0021.redis.dto.HostsDto;
 import org.springframework.util.StringUtils;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Supplier;
@@ -84,6 +85,27 @@ public final class Validator {
                 "Cluster mode requires host entries for proper redundancy"
         );
     }
+
+    /**
+     * Validate sentinel hosts.
+     *
+     * @param hosts the hosts
+     * @param sentinelMaster the sentinel master
+     */
+    public static void validateSentinelHosts(List<HostsDto> hosts, String sentinelMaster) {
+        validateHosts(hosts);
+        if (!StringUtils.hasText(sentinelMaster)) {
+            throw new IllegalArgumentException(
+                    "sentinelMaster must be configured when using SENTINEL mode"
+            );
+        }
+        if (hosts.size() > 1) {
+            return;
+        }
+        throw new IllegalArgumentException(
+                "Sentinel mode requires host entries for proper redundancy"
+        );
+    }
     /**
      * Validate required fields.
      * @param cacheName The cacheName
@@ -104,4 +126,52 @@ public final class Validator {
     }
 
 
+    /**
+     * Validate cacheable.
+     *
+     * @param <T> the generic type
+     * @param cacheName the cache name
+     * @param key the key
+     * @param loader the loader
+     * @param ttl the ttl
+     */
+    public static <T> void validateCacheable(String cacheName, String key, Supplier<T> loader, Duration ttl) {
+        Objects.requireNonNull(cacheName, "cacheName cannot be null");
+        Objects.requireNonNull(key, "key cannot be null");
+        Objects.requireNonNull(loader, "loader cannot be null");
+        Objects.requireNonNull(ttl, "ttl cannot be null");
+
+        if (cacheName.trim().isEmpty()) {
+            throw new IllegalArgumentException("cacheName cannot be empty");
+        }
+
+        if (key.trim().isEmpty()) {
+            throw new IllegalArgumentException("key cannot be empty");
+        }
+
+        if (ttl.isNegative() || ttl.isZero()) {
+            throw new IllegalArgumentException("ttl must be positive");
+        }
+
+        validateKeyFormat(cacheName, key);
+    }
+
+    /**
+     * Validate key format.
+     *
+     * @param cacheName the cache name
+     * @param key the key
+     */
+    private static void validateKeyFormat(String cacheName, String key) {
+        if (cacheName.contains(":") || cacheName.contains("*")) {
+            throw new IllegalArgumentException(
+                    "cacheName cannot contain ':' or '*' characters"
+            );
+        }
+        if (key.contains("*")) {
+            throw new IllegalArgumentException(
+                    "key cannot contain '*' character"
+            );
+        }
+    }
 }
