@@ -73,17 +73,17 @@ public class RedisHealthChecker {
 
                 Properties properties = connection.serverCommands().info();
 
-                boolean connected = "PONG".equalsIgnoreCase(pong);
-                String message = connected
+                boolean isConnected = "PONG".equalsIgnoreCase(pong);
+                String message = isConnected
                         ? "Redis is up and running and responding correctly"
                         : "Redis is not responding as expected. Response: " + pong;
 
-                if (!connected) {
+                if (!isConnected) {
                     log.warn(message);
                 }
 
                 return RedisStatusDto.builder()
-                        .connected(connected)
+                        .connected(isConnected)
                         .errorMessage(message)
                         .responseTime(endTime)
                         .usedMemory(Long.parseLong(properties.getProperty("used_memory")))
