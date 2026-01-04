@@ -5,8 +5,8 @@ import io.github.ajuarez0021.redis.dto.HostsDto;
 import io.github.ajuarez0021.redis.service.CacheOperationBuilder;
 import io.github.ajuarez0021.redis.service.RedisCacheService;
 import io.github.ajuarez0021.redis.service.RedisHealthChecker;
-import io.github.ajuarez0021.redis.util.Validator;
 import io.github.ajuarez0021.redis.util.Mode;
+import io.github.ajuarez0021.redis.util.Validator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.cache.CacheManager;
@@ -51,7 +51,7 @@ public class CacheConfig implements ImportAware {
      * The attribute username.
      */
     private static final String ATTRIBUTE_USER_NAME = "userName";
-    
+
     /**
      * The attributes.
      */
@@ -100,9 +100,11 @@ public class CacheConfig implements ImportAware {
         List<HostsDto> list = new ArrayList<>();
         AnnotationAttributes[] hostArray = attributes.getAnnotationArray("hostEntries");
         for (AnnotationAttributes entry : hostArray) {
-            String hostName = entry.getString("host");
-            int port = entry.getNumber("port");
-            list.add(HostsDto.builder().hostName(hostName).port(port).build());
+            if (entry != null) {
+                String hostName = entry.getString("host");
+                int port = entry.getNumber("port");
+                list.add(HostsDto.builder().hostName(hostName).port(port).build());
+            }
         }
         return list;
     }
@@ -130,7 +132,6 @@ public class CacheConfig implements ImportAware {
         }
         return config;
     }
-
 
 
     /**
@@ -276,10 +277,10 @@ public class CacheConfig implements ImportAware {
             return config;
         } catch (ReflectiveOperationException ex) {
             log.error("""
-                        Failed to instantiate custom ObjectMapperConfig: {}.
-                        Ensure the class has a public no-args constructor.
-                        Falling back to default configuration. {}
-                      """,
+                              Failed to instantiate custom ObjectMapperConfig: {}.
+                              Ensure the class has a public no-args constructor.
+                              Falling back to default configuration. {}
+                            """,
                     configClass.getName(), ex.getMessage());
             return new DefaultObjectMapperConfig();
         }
@@ -306,15 +307,18 @@ public class CacheConfig implements ImportAware {
 
         Map<String, Long> ttlsMap = new HashMap<>();
         for (AnnotationAttributes entry : ttlArray) {
-            String key = entry.getString("name");
-            Long value = entry.getNumber("ttl");
-            ttlsMap.put(key, value);
+            if (entry != null) {
+                String key = entry.getString("name");
+                Long value = entry.getNumber("ttl");
+                Validator.validateTTL(key, value);
+                ttlsMap.put(key, value);
+            }
         }
 
         Map<String, RedisCacheConfiguration> cacheConfiguration = new HashMap<>();
         ttlsMap
                 .forEach((cacheName, ttl) -> cacheConfiguration.put(cacheName, redisCacheConfiguration
-                        .entryTtl(Objects.requireNonNull(Duration.ofMillis(ttl), "ttl is required"))));
+                        .entryTtl(Objects.requireNonNull(Duration.ofMinutes(ttl), "ttl is required"))));
         return RedisCacheManager.builder(Objects.requireNonNull(createRedisConnectionFactory()))
                 .cacheDefaults(redisCacheConfiguration)
                 .withInitialCacheConfigurations(cacheConfiguration)

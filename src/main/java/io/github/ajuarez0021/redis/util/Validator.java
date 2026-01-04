@@ -125,7 +125,21 @@ public final class Validator {
         }
     }
 
+    /**
+     * Validate ttl.
+     *
+     * @param cacheName The cache name
+     * @param ttl       The ttl
+     */
+    public static void validateTTL(String cacheName, Long ttl) {
+        if (!StringUtils.hasText(cacheName)) {
+            throw new IllegalStateException("cacheName is required");
+        }
 
+        if (ttl == null || ttl <= 0) {
+            throw new IllegalArgumentException("ttl must be positive");
+        }
+    }
     /**
      * Validate cacheable.
      *
@@ -136,22 +150,15 @@ public final class Validator {
      * @param ttl the ttl
      */
     public static <T> void validateCacheable(String cacheName, String key, Supplier<T> loader, Duration ttl) {
-        Objects.requireNonNull(cacheName, "cacheName cannot be null");
-        Objects.requireNonNull(key, "key cannot be null");
-        Objects.requireNonNull(loader, "loader cannot be null");
-        Objects.requireNonNull(ttl, "ttl cannot be null");
-
-        if (cacheName.trim().isEmpty()) {
-            throw new IllegalArgumentException("cacheName cannot be empty");
-        }
-
-        if (key.trim().isEmpty()) {
-            throw new IllegalArgumentException("key cannot be empty");
+        if (ttl == null) {
+            throw new IllegalStateException("ttl is required");
         }
 
         if (ttl.isNegative() || ttl.isZero()) {
             throw new IllegalArgumentException("ttl must be positive");
         }
+
+        validateRequiredFields(cacheName, key, loader);
 
         validateKeyFormat(cacheName, key);
     }

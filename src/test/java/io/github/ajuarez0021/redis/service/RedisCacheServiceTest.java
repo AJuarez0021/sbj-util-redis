@@ -40,7 +40,7 @@ class RedisCacheServiceTest {
 
    
     /**
-     * Cacheable with null cache name should throw null pointer exception.
+     * Cacheable with null cache name should throw illegal state exception.
      */
     @Test
     void cacheable_WithNullCacheName_ShouldThrowNullPointerException() {
@@ -48,13 +48,13 @@ class RedisCacheServiceTest {
         Supplier<String> loader = () -> "value";
         Duration ttl = Duration.ofMinutes(10);
 
-        NullPointerException exception = assertThrows(NullPointerException.class,
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
                 () -> cacheService.cacheable(null, key, loader, ttl));
-        assertEquals("cacheName cannot be null", exception.getMessage());
+        assertEquals("cacheName is required", exception.getMessage());
     }
 
     /**
-     * Cacheable with null key should throw null pointer exception.
+     * Cacheable with null key should throw illegal state exception.
      */
     @Test
     void cacheable_WithNullKey_ShouldThrowNullPointerException() {
@@ -62,13 +62,13 @@ class RedisCacheServiceTest {
         Supplier<String> loader = () -> "value";
         Duration ttl = Duration.ofMinutes(10);
 
-        NullPointerException exception = assertThrows(NullPointerException.class,
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
                 () -> cacheService.cacheable(cacheName, null, loader, ttl));
-        assertEquals("key cannot be null", exception.getMessage());
+        assertEquals("key is required", exception.getMessage());
     }
 
     /**
-     * Cacheable with null loader should throw null pointer exception.
+     * Cacheable with null loader should throw illegal state exception.
      */
     @Test
     void cacheable_WithNullLoader_ShouldThrowNullPointerException() {
@@ -76,13 +76,13 @@ class RedisCacheServiceTest {
         String key = "testKey";
         Duration ttl = Duration.ofMinutes(10);
 
-        NullPointerException exception = assertThrows(NullPointerException.class,
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
                 () -> cacheService.cacheable(cacheName, key, null, ttl));
-        assertEquals("loader cannot be null", exception.getMessage());
+        assertEquals("loader is required", exception.getMessage());
     }
 
     /**
-     * Cacheable with null ttl should throw null pointer exception.
+     * Cacheable with null ttl should throw illegal state exception.
      */
     @Test
     void cacheable_WithNullTtl_ShouldThrowNullPointerException() {
@@ -90,9 +90,9 @@ class RedisCacheServiceTest {
         String key = "testKey";
         Supplier<String> loader = () -> "value";
 
-        NullPointerException exception = assertThrows(NullPointerException.class,
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
                 () -> cacheService.cacheable(cacheName, key, loader, null));
-        assertEquals("ttl cannot be null", exception.getMessage());
+        assertEquals("ttl is required", exception.getMessage());
     }
 
     /**
@@ -454,7 +454,7 @@ class RedisCacheServiceTest {
 
 
     /**
-     * Cacheable with empty cache name should throw exception.
+     * Cacheable with empty cache name should throw illegal state exception.
      */
     @Test
     void cacheable_WithEmptyCacheName_ShouldThrowException() {
@@ -462,12 +462,13 @@ class RedisCacheServiceTest {
         Supplier<String> loader = () -> "value";
         Duration ttl = Duration.ofMinutes(10);
 
-        assertThrows(IllegalArgumentException.class,
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
                 () -> cacheService.cacheable("", key, loader, ttl));
+        assertEquals("cacheName is required", exception.getMessage());
     }
 
     /**
-     * Cacheable with empty key should throw exception.
+     * Cacheable with empty key should throw illegal state exception.
      */
     @Test
     void cacheable_WithEmptyKey_ShouldThrowException() {
@@ -475,8 +476,9 @@ class RedisCacheServiceTest {
         Supplier<String> loader = () -> "value";
         Duration ttl = Duration.ofMinutes(10);
 
-        assertThrows(IllegalArgumentException.class,
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
                 () -> cacheService.cacheable(cacheName, "", loader, ttl));
+        assertEquals("key is required", exception.getMessage());
     }
 
     /**
