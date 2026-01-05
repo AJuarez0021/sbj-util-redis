@@ -114,8 +114,8 @@ public class CacheConfig implements ImportAware {
      *
      * @return the redis standalone configuration
      */
-    @Bean
-    RedisStandaloneConfiguration createStandaloneConfig() {
+
+    private RedisStandaloneConfiguration createStandaloneConfig() {
         List<HostsDto> hosts = getHostEntries();
         Validator.validateStandaloneHosts(hosts);
         HostsDto host = hosts.getFirst();
@@ -139,8 +139,7 @@ public class CacheConfig implements ImportAware {
      *
      * @return the redis cluster configuration
      */
-    @Bean
-    RedisClusterConfiguration createClusterConfig() {
+    private RedisClusterConfiguration createClusterConfig() {
         List<HostsDto> hosts = getHostEntries();
         Validator.validateClusterHosts(hosts);
         List<String> nodes = hosts.stream()
@@ -164,8 +163,8 @@ public class CacheConfig implements ImportAware {
      *
      * @return The sentinel config
      */
-    @Bean
-    RedisSentinelConfiguration createSentinelConfig() {
+
+    private RedisSentinelConfiguration createSentinelConfig() {
 
         String sentinelMaster = attributes.getString("sentinelMaster");
         List<HostsDto> hosts = getHostEntries();
