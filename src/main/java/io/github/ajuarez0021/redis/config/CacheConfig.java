@@ -124,6 +124,7 @@ public class CacheConfig implements ImportAware {
         config.setPort(host.getPort());
         String userName = attributes.getString(ATTRIBUTE_USER_NAME);
         String pwd = attributes.getString("pwd");
+        config.setDatabase(attributes.getNumber("database"));
         if (StringUtils.hasText(userName)) {
             config.setUsername(userName);
         }
@@ -179,6 +180,7 @@ public class CacheConfig implements ImportAware {
         }
         String userName = attributes.getString(ATTRIBUTE_USER_NAME);
         String pwd = attributes.getString("pwd");
+        sentinelConfig.setDatabase(attributes.getNumber("database"));
         if (StringUtils.hasText(userName)) {
             sentinelConfig.setSentinelUsername(userName);
         }

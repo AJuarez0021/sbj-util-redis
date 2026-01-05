@@ -25,9 +25,16 @@ import org.springframework.context.annotation.Import;
 public @interface EnableRedisLibrary {
 
     /**
+     * Database.
+     * Only for sentinel and standalone mode
+     *
+     * @return The database
+     */
+    int database() default 0;
+    /**
      * Hosts.
      *
-     * @return the string[]
+     * @return the HostEntry[]
      */
     HostEntry[] hostEntries() default {};
 

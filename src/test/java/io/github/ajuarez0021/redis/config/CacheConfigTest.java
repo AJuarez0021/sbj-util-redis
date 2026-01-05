@@ -299,6 +299,7 @@ class CacheConfigTest {
         map.put("readTimeout", 3000L);
         map.put("userName", "");
         map.put("pwd", "");
+        map.put("database", 0);
         map.put("mapperConfig", DefaultObjectMapperConfig.class);
 
         AnnotationAttributes[] hostEntries = new AnnotationAttributes[1];
@@ -530,13 +531,10 @@ class CacheConfigTest {
      */
     @Test
     void createRedisConnectionFactory_WithSentinelMode_ShouldCreateSentinelConfiguration() {
-        // Given
         setupSentinelConfiguration();
 
-        // When
         RedisConnectionFactory result = cacheConfig.createRedisConnectionFactory();
 
-        // Then
         assertNotNull(result);
     }
 
@@ -545,13 +543,10 @@ class CacheConfigTest {
      */
     @Test
     void createRedisConnectionFactory_WithSentinelModeAndCredentials_ShouldConfigureCredentials() {
-        // Given
         setupSentinelConfigurationWithCredentials();
 
-        // When
         RedisConnectionFactory result = cacheConfig.createRedisConnectionFactory();
 
-        // Then
         assertNotNull(result);
     }
 
@@ -560,14 +555,11 @@ class CacheConfigTest {
      */
     @Test
     void createSentinelConfig_WithoutSentinelMaster_ShouldThrowException() {
-        // Given
         setupSentinelConfigurationWithoutMaster();
 
-        // When & Then
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
                 () -> cacheConfig.createRedisConnectionFactory());
 
-        // Verify exception is thrown (message may vary depending on Spring internals)
         assertNotNull(exception.getMessage());
         assertTrue(exception.getMessage().contains("sentinelMaster"));
     }
@@ -577,10 +569,8 @@ class CacheConfigTest {
      */
     @Test
     void createSentinelConfig_WithEmptySentinelMaster_ShouldThrowException() {
-        // Given
         setupSentinelConfigurationWithEmptyMaster();
 
-        // When & Then
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
                 () -> cacheConfig.createRedisConnectionFactory());
 
@@ -593,17 +583,12 @@ class CacheConfigTest {
      */
     @Test
     void createSentinelConfig_WithValidConfiguration_ShouldCreateConfiguration() {
-        // Given
         setupSentinelConfiguration();
 
-        // When
         RedisConnectionFactory result = cacheConfig.createRedisConnectionFactory();
 
-        // Then
         assertNotNull(result);
     }
-
-    // ========== Sentinel Helper Methods ==========
 
     /**
      * Setup sentinel configuration.
