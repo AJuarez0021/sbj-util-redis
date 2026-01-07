@@ -1,6 +1,8 @@
 package io.github.ajuarez0021.redis.service;
 
 import io.github.ajuarez0021.redis.dto.RedisStatusDto;
+import io.lettuce.core.RedisFuture;
+import io.lettuce.core.api.async.RedisAsyncCommands;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -10,10 +12,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.connection.RedisServerCommands;
 import org.springframework.data.redis.core.RedisTemplate;
 
-import java.util.Properties;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -34,9 +36,13 @@ class RedisHealthCheckerTest {
     @Mock
     private RedisConnection connection;
 
-    /** The server commands. */
+    /** The redis async commands. */
     @Mock
-    private RedisServerCommands serverCommands;
+    private RedisAsyncCommands<Object, Object> asyncCommands;
+
+    /** The redis future. */
+    @Mock
+    private RedisFuture<String> redisFuture;
 
     /** The redis template. */
     @Mock
@@ -52,50 +58,70 @@ class RedisHealthCheckerTest {
     @BeforeEach
     void setUp() {
         lenient().when(redisTemplate.getConnectionFactory()).thenReturn(connectionFactory);
+        lenient().when(connectionFactory.getConnection()).thenReturn(connection);
     }
 
     /**
-     * Creates the mock redis info.
+     * Creates the mock redis info string.
      *
-     * @return the properties
+     * @return the info string
      */
-    private Properties createMockRedisInfo() {
-        Properties properties = new Properties();
-        properties.setProperty("used_memory", "1048576");
-        properties.setProperty("maxmemory", "2097152");
-        properties.setProperty("connected_clients", "5");
-        properties.setProperty("redis_version", "7.0.0");
-        return properties;
+    private String createMockRedisInfoString() {
+        return """
+            # Server
+            redis_version:7.0.0
+            redis_mode:standalone
+            os:Linux 5.10.0-28-amd64 x86_64
+            arch_bits:64
+
+            # Clients
+            connected_clients:5
+
+            # Memory
+            used_memory:1048576
+            used_memory_human:1.00M
+            used_memory_rss:2097152
+            maxmemory:2097152
+            maxmemory_human:2.00M
+
+            # Stats
+            total_connections_received:100
+            total_commands_processed:1000
+            """;
     }
 
-   
+
     /**
      * Checks if is redis active when redis is up should return connected true.
      */
     @Test
-    void isRedisActive_WhenRedisIsUp_ShouldReturnConnectedTrue() {
-        when(connectionFactory.getConnection()).thenReturn(connection);
+    void isRedisActive_WhenRedisIsUp_ShouldReturnConnectedTrue() throws Exception {
         when(connection.ping()).thenReturn("PONG");
-        when(connection.serverCommands()).thenReturn(serverCommands);
-        when(serverCommands.info()).thenReturn(createMockRedisInfo());
+        when(connection.getNativeConnection()).thenReturn(asyncCommands);
+        when(asyncCommands.info()).thenReturn(redisFuture);
+        when(redisFuture.get(anyLong(), any(TimeUnit.class))).thenReturn(createMockRedisInfoString());
 
         RedisStatusDto result = healthChecker.isRedisActive();
 
         assertNotNull(result);
         assertTrue(result.isConnected());
+        assertEquals(1048576L, result.getUsedMemory());
+        assertEquals(2097152L, result.getMaxMemory());
+        assertEquals(5, result.getConnectedClients());
+        assertEquals("7.0.0", result.getRedisVersion());
         verify(connection).ping();
-        verify(connection).serverCommands();
+        verify(connection).getNativeConnection();
     }
 
     /**
      * Checks if is redis active when redis is up should measure response time.
      */
     @Test
-    void isRedisActive_WhenRedisIsUp_ShouldMeasureResponseTime() {
-        when(connectionFactory.getConnection()).thenReturn(connection);
+    void isRedisActive_WhenRedisIsUp_ShouldMeasureResponseTime() throws Exception {
         when(connection.ping()).thenReturn("PONG");
-        when(connection.serverCommands()).thenReturn(serverCommands);
-        when(serverCommands.info()).thenReturn(createMockRedisInfo());
+        when(connection.getNativeConnection()).thenReturn(asyncCommands);
+        when(asyncCommands.info()).thenReturn(redisFuture);
+        when(redisFuture.get(anyLong(), any(TimeUnit.class))).thenReturn(createMockRedisInfoString());
 
         RedisStatusDto result = healthChecker.isRedisActive();
 
@@ -108,11 +134,11 @@ class RedisHealthCheckerTest {
      * Checks if is redis active when ping succeeds should return success message.
      */
     @Test
-    void isRedisActive_WhenPingSucceeds_ShouldReturnSuccessMessage() {
-        when(connectionFactory.getConnection()).thenReturn(connection);
+    void isRedisActive_WhenPingSucceeds_ShouldReturnSuccessMessage() throws Exception {
         when(connection.ping()).thenReturn("PONG");
-        when(connection.serverCommands()).thenReturn(serverCommands);
-        when(serverCommands.info()).thenReturn(createMockRedisInfo());
+        when(connection.getNativeConnection()).thenReturn(asyncCommands);
+        when(asyncCommands.info()).thenReturn(redisFuture);
+        when(redisFuture.get(anyLong(), any(TimeUnit.class))).thenReturn(createMockRedisInfoString());
 
         RedisStatusDto result = healthChecker.isRedisActive();
 
@@ -203,11 +229,11 @@ class RedisHealthCheckerTest {
      * Checks if is redis active when ping returns non pong should return not connected.
      */
     @Test
-    void isRedisActive_WhenPingReturnsNonPong_ShouldReturnNotConnected() {
-        when(connectionFactory.getConnection()).thenReturn(connection);
+    void isRedisActive_WhenPingReturnsNonPong_ShouldReturnNotConnected() throws Exception {
         when(connection.ping()).thenReturn("INVALID");
-        when(connection.serverCommands()).thenReturn(serverCommands);
-        when(serverCommands.info()).thenReturn(createMockRedisInfo());
+        when(connection.getNativeConnection()).thenReturn(asyncCommands);
+        when(asyncCommands.info()).thenReturn(redisFuture);
+        when(redisFuture.get(anyLong(), any(TimeUnit.class))).thenReturn(createMockRedisInfoString());
 
         RedisStatusDto result = healthChecker.isRedisActive();
 
@@ -220,11 +246,11 @@ class RedisHealthCheckerTest {
      * Checks if is redis active when ping returns null should handle gracefully.
      */
     @Test
-    void isRedisActive_WhenPingReturnsNull_ShouldHandleGracefully() {
-        when(connectionFactory.getConnection()).thenReturn(connection);
+    void isRedisActive_WhenPingReturnsNull_ShouldHandleGracefully() throws Exception {
         when(connection.ping()).thenReturn(null);
-        when(connection.serverCommands()).thenReturn(serverCommands);
-        when(serverCommands.info()).thenReturn(createMockRedisInfo());
+        when(connection.getNativeConnection()).thenReturn(asyncCommands);
+        when(asyncCommands.info()).thenReturn(redisFuture);
+        when(redisFuture.get(anyLong(), any(TimeUnit.class))).thenReturn(createMockRedisInfoString());
 
         RedisStatusDto result = healthChecker.isRedisActive();
 
@@ -236,11 +262,11 @@ class RedisHealthCheckerTest {
      * Checks if is redis active when ping returns empty string should handle gracefully.
      */
     @Test
-    void isRedisActive_WhenPingReturnsEmptyString_ShouldHandleGracefully() {
-        when(connectionFactory.getConnection()).thenReturn(connection);
+    void isRedisActive_WhenPingReturnsEmptyString_ShouldHandleGracefully() throws Exception {
         when(connection.ping()).thenReturn("");
-        when(connection.serverCommands()).thenReturn(serverCommands);
-        when(serverCommands.info()).thenReturn(createMockRedisInfo());
+        when(connection.getNativeConnection()).thenReturn(asyncCommands);
+        when(asyncCommands.info()).thenReturn(redisFuture);
+        when(redisFuture.get(anyLong(), any(TimeUnit.class))).thenReturn(createMockRedisInfoString());
 
         RedisStatusDto result = healthChecker.isRedisActive();
 
@@ -252,11 +278,11 @@ class RedisHealthCheckerTest {
      * Checks if is redis active when ping returns pong lowercase should return connected.
      */
     @Test
-    void isRedisActive_WhenPingReturnsPongLowercase_ShouldReturnConnected() {
-        when(connectionFactory.getConnection()).thenReturn(connection);
+    void isRedisActive_WhenPingReturnsPongLowercase_ShouldReturnConnected() throws Exception {
         when(connection.ping()).thenReturn("pong");
-        when(connection.serverCommands()).thenReturn(serverCommands);
-        when(serverCommands.info()).thenReturn(createMockRedisInfo());
+        when(connection.getNativeConnection()).thenReturn(asyncCommands);
+        when(asyncCommands.info()).thenReturn(redisFuture);
+        when(redisFuture.get(anyLong(), any(TimeUnit.class))).thenReturn(createMockRedisInfoString());
 
         RedisStatusDto result = healthChecker.isRedisActive();
 
