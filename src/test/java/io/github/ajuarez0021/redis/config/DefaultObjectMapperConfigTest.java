@@ -181,7 +181,11 @@ class DefaultObjectMapperConfigTest {
     @Test
     void configure_ShouldBeUsableForDeserialization() throws Exception {
         ObjectMapper mapper = config.configure();
-        String json = "{\"name\":\"test\",\"value\":123,\"unknownField\":\"should be ignored\"}";
+
+        String json =
+                """
+                 {"@class":"io.github.ajuarez0021.redis.config.DefaultObjectMapperConfigTest$TestObject","name":"test","value":123,"unknownField":"should be ignored"}
+                """;
 
         TestObject result = mapper.readValue(json, TestObject.class);
 

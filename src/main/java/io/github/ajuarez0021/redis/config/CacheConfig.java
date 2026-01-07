@@ -273,7 +273,7 @@ public class CacheConfig implements ImportAware {
             ObjectMapperConfig config = (ObjectMapperConfig) configClass
                     .getDeclaredConstructor()
                     .newInstance();
-            log.debug("Successfully instantiated custom ObjectMapperConfig: {}",
+            log.info("Successfully instantiated custom ObjectMapperConfig: {}",
                     configClass.getName());
             return config;
         } catch (ReflectiveOperationException ex) {

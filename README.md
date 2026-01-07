@@ -210,9 +210,9 @@ The `@EnableRedisLibrary` annotation supports the following parameters:
         @HostEntry(host = "localhost", port = 6379)
     },
     ttlEntries = {
-        @TTLEntry(name = "users", ttl = 1800000),      // 30 minutes
-        @TTLEntry(name = "products", ttl = 3600000),   // 1 hour
-        @TTLEntry(name = "sessions", ttl = 7200000)    // 2 hours
+        @TTLEntry(name = "users", ttl = 30),      // 30 minutes
+        @TTLEntry(name = "products", ttl = 60),   // 1 hour
+        @TTLEntry(name = "sessions", ttl = 120)    // 2 hours
     }
 )
 ```
@@ -244,7 +244,7 @@ Then reference it in the annotation:
     hostEntries = {
         @HostEntry(host = "localhost", port = 6379)
     },
-    errorHandler = CustomObjectMapperConfig.class
+    mapperConfig = CustomObjectMapperConfig.class
 )
 ```
 
