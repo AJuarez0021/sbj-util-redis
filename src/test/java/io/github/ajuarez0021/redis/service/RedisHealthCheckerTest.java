@@ -83,6 +83,7 @@ class RedisHealthCheckerTest {
             used_memory_rss:2097152
             maxmemory:2097152
             maxmemory_human:2.00M
+            total_system_memory:2097152
 
             # Stats
             total_connections_received:100
@@ -288,5 +289,130 @@ class RedisHealthCheckerTest {
 
         assertNotNull(result);
         assertTrue(result.isConnected());
+    }
+
+    /**
+     * Checks if is redis active when redis info has invalid memory values should handle gracefully.
+     */
+    @Test
+    void isRedisActive_WhenRedisInfoHasInvalidMemoryValues_ShouldHandleGracefully() throws Exception {
+        String infoWithInvalidNumbers = """
+            # Server
+            redis_version:7.0.0
+
+            # Clients
+            connected_clients:invalid_number
+
+            # Memory
+            used_memory:not_a_number
+            total_system_memory:invalid
+            """;
+
+        when(connection.ping()).thenReturn("PONG");
+        when(connection.getNativeConnection()).thenReturn(asyncCommands);
+        when(asyncCommands.info()).thenReturn(redisFuture);
+        when(redisFuture.get(anyLong(), any(TimeUnit.class))).thenReturn(infoWithInvalidNumbers);
+
+        RedisStatusDto result = healthChecker.isRedisActive();
+
+        assertNotNull(result);
+        assertTrue(result.isConnected());
+        assertEquals(0L, result.getUsedMemory());
+        assertEquals(0L, result.getMaxMemory());
+        assertEquals(0, result.getConnectedClients());
+    }
+
+    /**
+     * Checks if is redis active when redis info has malformed lines should handle gracefully.
+     */
+    @Test
+    void isRedisActive_WhenRedisInfoHasMalformedLines_ShouldHandleGracefully() throws Exception {
+        String infoWithMalformedLines = """
+            # Server
+            redis_version:7.0.0
+
+            # Invalid lines
+            line_without_colon
+            :value_without_key
+
+            # Clients
+            connected_clients:5
+
+            # Memory
+            used_memory:1048576
+            total_system_memory:2097152
+            """;
+
+        when(connection.ping()).thenReturn("PONG");
+        when(connection.getNativeConnection()).thenReturn(asyncCommands);
+        when(asyncCommands.info()).thenReturn(redisFuture);
+        when(redisFuture.get(anyLong(), any(TimeUnit.class))).thenReturn(infoWithMalformedLines);
+
+        RedisStatusDto result = healthChecker.isRedisActive();
+
+        assertNotNull(result);
+        assertTrue(result.isConnected());
+        assertEquals("7.0.0", result.getRedisVersion());
+        assertEquals(5, result.getConnectedClients());
+    }
+
+    /**
+     * Checks if is redis active when redis info is empty string should handle gracefully.
+     */
+    @Test
+    void isRedisActive_WhenRedisInfoIsEmptyString_ShouldHandleGracefully() throws Exception {
+        when(connection.ping()).thenReturn("PONG");
+        when(connection.getNativeConnection()).thenReturn(asyncCommands);
+        when(asyncCommands.info()).thenReturn(redisFuture);
+        when(redisFuture.get(anyLong(), any(TimeUnit.class))).thenReturn("");
+
+        RedisStatusDto result = healthChecker.isRedisActive();
+
+        assertNotNull(result);
+        assertTrue(result.isConnected());
+        assertEquals(0L, result.getUsedMemory());
+        assertEquals(0L, result.getMaxMemory());
+        assertEquals(0, result.getConnectedClients());
+        assertEquals("", result.getRedisVersion());
+    }
+
+    /**
+     * Checks if is redis active when native connection info times out should handle gracefully.
+     */
+    @Test
+    void isRedisActive_WhenNativeConnectionInfoTimesOut_ShouldHandleGracefully() throws Exception {
+        when(connection.ping()).thenReturn("PONG");
+        when(connection.getNativeConnection()).thenReturn(asyncCommands);
+        when(asyncCommands.info()).thenReturn(redisFuture);
+        when(redisFuture.get(anyLong(), any(TimeUnit.class)))
+                .thenThrow(new java.util.concurrent.TimeoutException("Timeout"));
+
+        RedisStatusDto result = healthChecker.isRedisActive();
+
+        assertNotNull(result);
+        assertTrue(result.isConnected());
+        assertEquals(0L, result.getUsedMemory());
+        assertEquals(0L, result.getMaxMemory());
+    }
+
+    /**
+     * Checks if is redis active when native connection info throws execution exception
+     * should handle gracefully.
+     */
+    @Test
+    void isRedisActive_WhenNativeConnectionInfoThrowsExecutionException_ShouldHandleGracefully()
+            throws Exception {
+        when(connection.ping()).thenReturn("PONG");
+        when(connection.getNativeConnection()).thenReturn(asyncCommands);
+        when(asyncCommands.info()).thenReturn(redisFuture);
+        when(redisFuture.get(anyLong(), any(TimeUnit.class)))
+                .thenThrow(new java.util.concurrent.ExecutionException("Execution failed", new Exception()));
+
+        RedisStatusDto result = healthChecker.isRedisActive();
+
+        assertNotNull(result);
+        assertTrue(result.isConnected());
+        assertEquals(0L, result.getUsedMemory());
+        assertEquals(0L, result.getMaxMemory());
     }
 }

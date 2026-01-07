@@ -108,10 +108,10 @@ public class RedisHealthChecker {
             }
 
         } catch (DataAccessException e) {
-            log.error("Error checking Redis status: {}", e.getMessage(), e);
+            log.error("Error checking Redis status: {}", e.getMessage());
             return createStatus(String.format("Error checking Redis status: %s", e.getMessage()));
         } catch (Exception e) {
-            log.error("Unexpected error checking Redis status: {}", e.getMessage(), e);
+            log.error("Unexpected error checking Redis status: {}", e.getMessage());
             return createStatus(String.format("Unexpected error checking Redis status: %s", e.getMessage()));
         }
     }
@@ -165,7 +165,7 @@ public class RedisHealthChecker {
             }
 
         } catch (InterruptedException | TimeoutException | ExecutionException e) {
-            log.error("Failed to get Redis info: {}", e.getMessage(), e);
+            log.error("Failed to get Redis info: {}", e.getMessage());
             Thread.currentThread().interrupt();
         }
 
