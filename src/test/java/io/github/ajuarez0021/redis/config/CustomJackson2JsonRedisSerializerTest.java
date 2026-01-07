@@ -111,6 +111,17 @@ class CustomJackson2JsonRedisSerializerTest {
     
 
     /**
+     * Deserialize with null byte array should return null.
+     */
+    @Test
+    void deserialize_WithNullByteArray_ShouldReturnNull() {
+        Object result = serializer.deserialize(null);
+
+        assertNull(result);
+        verifyNoInteractions(objectMapper);
+    }
+
+    /**
      * Deserialize with empty byte array should return null.
      */
     @Test
