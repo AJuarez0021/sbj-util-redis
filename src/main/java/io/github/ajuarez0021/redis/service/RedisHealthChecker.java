@@ -164,9 +164,11 @@ public class RedisHealthChecker {
                 log.warn("INFO command returned null or empty string");
             }
 
-        } catch (InterruptedException | TimeoutException | ExecutionException e) {
+        } catch (InterruptedException e) {
             log.error("Failed to get Redis info: {}", e.getMessage());
             Thread.currentThread().interrupt();
+        } catch(TimeoutException | ExecutionException e) {
+            log.error("Execution error while getting Redis info: {}", e.getMessage());
         }
 
         return info;

@@ -177,7 +177,7 @@ class CacheConfigTest {
     void createRedisTemplate_ShouldCreateConfiguredTemplate() {
         setupStandaloneConfiguration();
 
-        RedisTemplate<String, ?> template = cacheConfig.createRedisTemplate();
+        RedisTemplate<String, ?> template = cacheConfig.createRedisTemplate(cacheConfig.createRedisConnectionFactory());
 
         assertNotNull(template);
         assertNotNull(template.getConnectionFactory());
@@ -192,7 +192,7 @@ class CacheConfigTest {
     void cacheManager_ShouldCreateCacheManager() {
         setupStandaloneConfigurationWithTTL();
 
-        CacheManager cacheManager = cacheConfig.cacheManager();
+        CacheManager cacheManager = cacheConfig.cacheManager(cacheConfig.createRedisConnectionFactory());
 
         assertNotNull(cacheManager);
     }

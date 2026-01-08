@@ -1,5 +1,6 @@
 package io.github.ajuarez0021.redis.service;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -173,23 +174,22 @@ public class RedisCacheService {
                         .count(100)
                         .build();
 
-                Cursor<byte[]> cursor = connection.keyCommands().scan(options);
-                List<String> keysToDelete = new ArrayList<>();
+                try(Cursor<byte[]> cursor = connection.keyCommands().scan(options)) {
+                    List<String> keysToDelete = new ArrayList<>();
 
-                while (cursor.hasNext()) {
-                    keysToDelete.add(new String(cursor.next()));
+                    while (cursor.hasNext()) {
+                        keysToDelete.add(new String(cursor.next(), StandardCharsets.UTF_8));
 
-                    if (keysToDelete.size() >= 100) {
+                        if (keysToDelete.size() >= 100) {
+                            redisTemplate.delete(keysToDelete);
+                            keysToDelete.clear();
+                        }
+                    }
+
+                    if (!keysToDelete.isEmpty()) {
                         redisTemplate.delete(keysToDelete);
-                        keysToDelete.clear();
                     }
                 }
-
-                if (!keysToDelete.isEmpty()) {
-                    redisTemplate.delete(keysToDelete);
-                }
-
-                cursor.close();
                 return null;
             });
             log.debug("Cache EVICTED ALL - Pattern: {}", pattern);
@@ -224,30 +224,28 @@ public class RedisCacheService {
      */
     public void cacheEvictByPattern(String pattern) {
         try {
-
             redisTemplate.execute((RedisCallback<Void>) connection -> {
                 ScanOptions options = ScanOptions.scanOptions()
                         .match(pattern)
                         .count(100)
                         .build();
 
-                Cursor<byte[]> cursor = connection.keyCommands().scan(options);
-                List<String> keysToDelete = new ArrayList<>();
+                try(Cursor<byte[]> cursor = connection.keyCommands().scan(options)) {
+                    List<String> keysToDelete = new ArrayList<>();
 
-                while (cursor.hasNext()) {
-                    keysToDelete.add(new String(cursor.next()));
+                    while (cursor.hasNext()) {
+                        keysToDelete.add(new String(cursor.next(), StandardCharsets.UTF_8));
 
-                    if (keysToDelete.size() >= 100) {
+                        if (keysToDelete.size() >= 100) {
+                            redisTemplate.delete(keysToDelete);
+                            keysToDelete.clear();
+                        }
+                    }
+
+                    if (!keysToDelete.isEmpty()) {
                         redisTemplate.delete(keysToDelete);
-                        keysToDelete.clear();
                     }
                 }
-
-                if (!keysToDelete.isEmpty()) {
-                    redisTemplate.delete(keysToDelete);
-                }
-
-                cursor.close();
                 return null;
             });
 

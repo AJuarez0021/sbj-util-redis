@@ -177,6 +177,8 @@ public final class CacheOperationBuilder<T> {
      * @return the t
      */
     public T cachePut() {
+        Validator.validateRequiredFields(cacheName, key, loader);
+
         return cacheService.cachePut(cacheName, key, loader, ttl);
     }
 

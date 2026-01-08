@@ -231,14 +231,15 @@ public class CacheConfig implements ImportAware {
      * Creates the redis template.
      *
      * @param <T> the generic type
+     * @param connectionFactory The connection factory
      * @return the redis template
      */
     @Bean
     @ConditionalOnMissingBean
     @SuppressWarnings("unchecked")
-    <T> RedisTemplate<String, T> createRedisTemplate() {
+    <T> RedisTemplate<String, T> createRedisTemplate(RedisConnectionFactory connectionFactory) {
         RedisTemplate<String, T> template = new RedisTemplate<>();
-        template.setConnectionFactory(createRedisConnectionFactory());
+        template.setConnectionFactory(connectionFactory);
 
         StringRedisSerializer stringSerializer = new StringRedisSerializer();
         template.setKeySerializer(stringSerializer);
@@ -289,11 +290,11 @@ public class CacheConfig implements ImportAware {
 
     /**
      * Cache manager.
-     *
+     * @param connectionFactory The connection factory
      * @return the cache manager
      */
     @Bean
-    CacheManager cacheManager() {
+    CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
         ObjectMapperConfig mapperConfig = getObjectMapperConfig();
 
         RedisCacheConfiguration redisCacheConfiguration = RedisCacheConfiguration
@@ -320,7 +321,7 @@ public class CacheConfig implements ImportAware {
         ttlsMap
                 .forEach((cacheName, ttl) -> cacheConfiguration.put(cacheName, redisCacheConfiguration
                         .entryTtl(Objects.requireNonNull(Duration.ofMinutes(ttl), "ttl is required"))));
-        return RedisCacheManager.builder(Objects.requireNonNull(createRedisConnectionFactory()))
+        return RedisCacheManager.builder(connectionFactory)
                 .cacheDefaults(redisCacheConfiguration)
                 .withInitialCacheConfigurations(cacheConfiguration)
                 .build();
@@ -335,5 +336,12 @@ public class CacheConfig implements ImportAware {
     public void setImportMetadata(AnnotationMetadata importMetadata) {
         this.attributes = AnnotationAttributes.fromMap(
                 importMetadata.getAnnotationAttributes(EnableRedisLibrary.class.getName()));
+        if (this.attributes == null) {
+            throw new IllegalStateException(
+                    """
+                    @EnableRedisLibrary annotation not found.
+                    Please ensure your configuration class is annotated with @EnableRedisLibrary
+                    """);
+        }
     }
 }
