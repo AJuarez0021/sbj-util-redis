@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
+import io.github.ajuarez0021.redis.dto.CacheResult;
 import io.github.ajuarez0021.redis.util.Validator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.Cursor;
@@ -48,35 +49,8 @@ public class RedisCacheService {
      * @param ttl the ttl
      * @return the object
      */
-    @SuppressWarnings("unchecked")
     public <T> T cacheable(String cacheName, String key, Supplier<T> loader, Duration ttl) {
-        Validator.validateCacheable(cacheName, key, loader, ttl);
-
-        String fullKey = buildKey(cacheName, key);
-        try {
-
-            Object cached = redisTemplate.opsForValue().get(fullKey);
-
-            if (cached != null) {
-                log.debug("Cache HIT - Key: {}", fullKey);
-                return (T) cached;
-            }
-
-            log.debug("Cache MISS - Key: {}", fullKey);
-
-            T result = loader.get();
-
-            if (result != null) {
-                redisTemplate.opsForValue().set(fullKey, result, ttl);
-                log.debug("Cached data - Key: {}", fullKey);
-            }
-
-            return result;
-
-        } catch (Exception e) {
-            log.error("Error in cacheable operation for key {}: {}", fullKey, e.getMessage());
-            return loader.get();
-        }
+        return cacheableWithResult(cacheName, key, loader, ttl).getValue();
     }
 
 
@@ -95,6 +69,67 @@ public class RedisCacheService {
     }
 
     /**
+     * Cacheable operation that returns detailed result including cache hit/miss information.
+     *
+     * <p>This method provides the same functionality as {@link #cacheable(String, String, Supplier, Duration)}
+     * but includes metadata about whether the value came from cache (hit) or was loaded from the source (miss).</p>
+     *
+     * @param <T> the generic type
+     * @param cacheName the cache name
+     * @param key the key
+     * @param loader the loader function to execute on cache miss
+     * @param ttl the time to live
+     * @return CacheResult containing the value and hit/miss information
+     */
+    @SuppressWarnings("unchecked")
+    public <T> CacheResult<T> cacheableWithResult(String cacheName, String key,
+                                                    Supplier<T> loader, Duration ttl) {
+        Validator.validateCacheable(cacheName, key, loader, ttl);
+
+        String fullKey = buildKey(cacheName, key);
+        T result = null;
+        boolean wasLoaded = false;
+        try {
+            Object cached = redisTemplate.opsForValue().get(fullKey);
+
+            if (cached != null) {
+                log.debug("Cache HIT - Key: {}", fullKey);
+                return CacheResult.hit((T) cached);
+            }
+
+            result = loader.get();
+            wasLoaded = true;
+
+            if (result != null) {
+                redisTemplate.opsForValue().set(fullKey, result, ttl);
+                log.debug("Cached data - Key: {}", fullKey);
+            }
+
+            return CacheResult.miss(result);
+
+        } catch (Exception e) {
+            log.error("Error in cacheable operation for key {}: {}", fullKey, e.getMessage());
+            if (!wasLoaded) {
+                result = loader.get();
+            }
+            return CacheResult.miss(result);
+        }
+    }
+
+    /**
+     * Cacheable operation with result and default TTL of 10 minutes.
+     *
+     * @param <T> the generic type
+     * @param cacheName the cache name
+     * @param key the key
+     * @param loader the loader
+     * @return CacheResult containing the value and hit/miss information
+     */
+    public <T> CacheResult<T> cacheableWithResult(String cacheName, String key, Supplier<T> loader) {
+        return cacheableWithResult(cacheName, key, loader, Duration.ofMinutes(10));
+    }
+
+    /**
      * Equivalent to @CachePut.
      *
      * @param <T> the generic type
@@ -106,9 +141,11 @@ public class RedisCacheService {
      */
     public <T> T cachePut(String cacheName, String key, Supplier<T> loader, Duration ttl) {
         String fullKey = buildKey(cacheName, key);
-
+        boolean wasLoaded = false;
+        T result = null;
         try {
-            T result = loader.get();
+            result = loader.get();
+            wasLoaded = true;
 
             if (result != null) {
                 redisTemplate.opsForValue().set(fullKey, result, ttl);
@@ -122,7 +159,10 @@ public class RedisCacheService {
 
         } catch (Exception e) {
             log.error("Error in cachePut operation for key {}: {}", fullKey, e.getMessage());
-            return loader.get();
+            if (!wasLoaded) {
+                result = loader.get();
+            }
+            return result;
         }
     }
 

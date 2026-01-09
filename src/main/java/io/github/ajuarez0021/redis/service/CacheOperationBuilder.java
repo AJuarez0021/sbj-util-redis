@@ -1,5 +1,6 @@
 package io.github.ajuarez0021.redis.service;
 
+import io.github.ajuarez0021.redis.dto.CacheResult;
 import io.github.ajuarez0021.redis.util.Validator;
 
 import java.time.Duration;
@@ -159,15 +160,15 @@ public final class CacheOperationBuilder<T> {
             return loader.get();
         }
 
-        T result = cacheService.cacheable(cacheName, key, loader, ttl);
+        CacheResult<T> result = cacheService.cacheableWithResult(cacheName, key, loader, ttl);
 
-        if (cacheService.exists(cacheName, key) && onHit != null) {
-            onHit.accept(result);
-        } else if (onMiss != null) {
-            onMiss.accept(result);
+        if (result.isCacheHit() && onHit != null) {
+            onHit.accept(result.getValue());
+        } else if (result.isCacheMiss() && onMiss != null) {
+            onMiss.accept(result.getValue());
         }
 
-        return result;
+        return result.getValue();
     }
 
 

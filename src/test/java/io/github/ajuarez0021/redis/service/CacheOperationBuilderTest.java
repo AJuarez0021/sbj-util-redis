@@ -1,5 +1,6 @@
 package io.github.ajuarez0021.redis.service;
 
+import io.github.ajuarez0021.redis.dto.CacheResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -112,9 +113,8 @@ class CacheOperationBuilderTest {
                 String expectedValue = "testValue";
                 Supplier<String> loader = () -> expectedValue;
 
-                when(cacheService.cacheable(eq(cacheName), eq(key), any(), any(Duration.class)))
-                                .thenReturn(expectedValue);
-                when(cacheService.exists(cacheName, key)).thenReturn(false);
+                when(cacheService.cacheableWithResult(eq(cacheName), eq(key), any(), any(Duration.class)))
+                                .thenReturn(CacheResult.miss(expectedValue));
 
                 String result = builder.cacheName(cacheName)
                                 .key(key)
@@ -122,7 +122,8 @@ class CacheOperationBuilderTest {
                                 .cacheable();
 
                 assertEquals(expectedValue, result);
-                verify(cacheService).cacheable(eq(cacheName), eq(key), any(), eq(Duration.ofMinutes(10)));
+                verify(cacheService).cacheableWithResult(eq(cacheName), eq(key), any(),
+                                eq(Duration.ofMinutes(10)));
         }
 
         /**
@@ -135,9 +136,8 @@ class CacheOperationBuilderTest {
                 String expectedValue = "testValue";
                 Duration customTtl = Duration.ofHours(2);
 
-                when(cacheService.cacheable(eq(cacheName), eq(key), any(), eq(customTtl)))
-                                .thenReturn(expectedValue);
-                when(cacheService.exists(cacheName, key)).thenReturn(false);
+                when(cacheService.cacheableWithResult(eq(cacheName), eq(key), any(), eq(customTtl)))
+                                .thenReturn(CacheResult.miss(expectedValue));
 
                 String result = builder.cacheName(cacheName)
                                 .key(key)
@@ -146,7 +146,7 @@ class CacheOperationBuilderTest {
                                 .cacheable();
 
                 assertEquals(expectedValue, result);
-                verify(cacheService).cacheable(eq(cacheName), eq(key), any(), eq(customTtl));
+                verify(cacheService).cacheableWithResult(eq(cacheName), eq(key), any(), eq(customTtl));
         }
 
         /**
@@ -155,9 +155,8 @@ class CacheOperationBuilderTest {
         @Test
         void builder_ShouldSupportFluentAPI() {
                 String expectedValue = "testValue";
-                when(cacheService.cacheable(anyString(), anyString(), any(), any(Duration.class)))
-                                .thenReturn(expectedValue);
-                when(cacheService.exists(anyString(), anyString())).thenReturn(false);
+                when(cacheService.cacheableWithResult(anyString(), anyString(), any(), any(Duration.class)))
+                                .thenReturn(CacheResult.miss(expectedValue));
 
                 String result = builder
                                 .cacheName("cache")
@@ -195,9 +194,8 @@ class CacheOperationBuilderTest {
         @Test
         void cacheable_WithConditionTrue_ShouldUseCache() {
                 String expectedValue = "testValue";
-                when(cacheService.cacheable(anyString(), anyString(), any(), any(Duration.class)))
-                                .thenReturn(expectedValue);
-                when(cacheService.exists(anyString(), anyString())).thenReturn(false);
+                when(cacheService.cacheableWithResult(anyString(), anyString(), any(), any(Duration.class)))
+                                .thenReturn(CacheResult.miss(expectedValue));
 
                 String result = builder.cacheName("testCache")
                                 .key("testKey")
@@ -206,7 +204,7 @@ class CacheOperationBuilderTest {
                                 .cacheable();
 
                 assertEquals(expectedValue, result);
-                verify(cacheService).cacheable(anyString(), anyString(), any(), any(Duration.class));
+                verify(cacheService).cacheableWithResult(anyString(), anyString(), any(), any(Duration.class));
         }
 
 
@@ -225,9 +223,8 @@ class CacheOperationBuilderTest {
                         assertEquals(cachedValue, value);
                 };
 
-                when(cacheService.cacheable(eq(cacheName), eq(key), any(), any(Duration.class)))
-                                .thenReturn(cachedValue);
-                when(cacheService.exists(cacheName, key)).thenReturn(true);
+                when(cacheService.cacheableWithResult(eq(cacheName), eq(key), any(), any(Duration.class)))
+                                .thenReturn(CacheResult.hit(cachedValue));
 
                 String result = builder.cacheName(cacheName)
                                 .key(key)
@@ -253,9 +250,8 @@ class CacheOperationBuilderTest {
                         assertEquals(loadedValue, value);
                 };
 
-                when(cacheService.cacheable(eq(cacheName), eq(key), any(), any(Duration.class)))
-                                .thenReturn(loadedValue);
-                when(cacheService.exists(cacheName, key)).thenReturn(false);
+                when(cacheService.cacheableWithResult(eq(cacheName), eq(key), any(), any(Duration.class)))
+                                .thenReturn(CacheResult.miss(loadedValue));
 
                 String result = builder.cacheName(cacheName)
                                 .key(key)
@@ -278,9 +274,8 @@ class CacheOperationBuilderTest {
                 AtomicBoolean hitCallbackInvoked = new AtomicBoolean(false);
                 AtomicBoolean missCallbackInvoked = new AtomicBoolean(false);
 
-                when(cacheService.cacheable(eq(cacheName), eq(key), any(), any(Duration.class)))
-                                .thenReturn(cachedValue);
-                when(cacheService.exists(cacheName, key)).thenReturn(true);
+                when(cacheService.cacheableWithResult(eq(cacheName), eq(key), any(), any(Duration.class)))
+                                .thenReturn(CacheResult.hit(cachedValue));
 
                 String result = builder.cacheName(cacheName)
                                 .key(key)
@@ -300,9 +295,8 @@ class CacheOperationBuilderTest {
         @Test
         void cacheable_WithoutCallbacks_ShouldNotThrowException() {
                 String expectedValue = "testValue";
-                when(cacheService.cacheable(anyString(), anyString(), any(), any(Duration.class)))
-                                .thenReturn(expectedValue);
-                when(cacheService.exists(anyString(), anyString())).thenReturn(false);
+                when(cacheService.cacheableWithResult(anyString(), anyString(), any(), any(Duration.class)))
+                                .thenReturn(CacheResult.miss(expectedValue));
 
                 assertDoesNotThrow(() -> builder.cacheName("testCache")
                                 .key("testKey")
@@ -395,18 +389,18 @@ class CacheOperationBuilderTest {
          */
         @Test
         void builder_ShouldHaveDefaultTtlOf10Minutes() {
-                
+
                 String expectedValue = "testValue";
-                when(cacheService.cacheable(anyString(), anyString(), any(), any(Duration.class)))
-                                .thenReturn(expectedValue);
-                when(cacheService.exists(anyString(), anyString())).thenReturn(false);
+                when(cacheService.cacheableWithResult(anyString(), anyString(), any(), any(Duration.class)))
+                                .thenReturn(CacheResult.miss(expectedValue));
 
                 builder.cacheName("testCache")
                                 .key("testKey")
                                 .loader(() -> expectedValue)
                                 .cacheable();
 
-                verify(cacheService).cacheable(anyString(), anyString(), any(), eq(Duration.ofMinutes(10)));
+                verify(cacheService).cacheableWithResult(anyString(), anyString(), any(),
+                                eq(Duration.ofMinutes(10)));
         }
 
         /**
@@ -415,15 +409,14 @@ class CacheOperationBuilderTest {
         @Test
         void builder_ShouldHaveDefaultConditionTrue() {
                 String expectedValue = "testValue";
-                when(cacheService.cacheable(anyString(), anyString(), any(), any(Duration.class)))
-                                .thenReturn(expectedValue);
-                when(cacheService.exists(anyString(), anyString())).thenReturn(false);
+                when(cacheService.cacheableWithResult(anyString(), anyString(), any(), any(Duration.class)))
+                                .thenReturn(CacheResult.miss(expectedValue));
 
                 builder.cacheName("testCache")
                                 .key("testKey")
                                 .loader(() -> expectedValue)
                                 .cacheable();
 
-                verify(cacheService).cacheable(anyString(), anyString(), any(), any(Duration.class));
+                verify(cacheService).cacheableWithResult(anyString(), anyString(), any(), any(Duration.class));
         }
 }

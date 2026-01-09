@@ -1,5 +1,6 @@
 package io.github.ajuarez0021.redis.service;
 
+import io.github.ajuarez0021.redis.dto.CacheResult;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -193,6 +194,170 @@ class RedisCacheServiceTest {
         String result = cacheService.cacheable(cacheName, key, loader, Duration.ofMinutes(10));
 
         assertEquals(loadedValue, result);
+        verify(valueOperations).get("users:user1");
+    }
+
+    /**
+     * Cacheable with result with null cache name should throw illegal state exception.
+     */
+    @Test
+    void cacheableWithResult_WithNullCacheName_ShouldThrowIllegalStateException() {
+        String key = "testKey";
+        Supplier<String> loader = () -> "value";
+        Duration ttl = Duration.ofMinutes(10);
+
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> cacheService.cacheableWithResult(null, key, loader, ttl));
+        assertEquals("cacheName is required", exception.getMessage());
+    }
+
+    /**
+     * Cacheable with result with null key should throw illegal state exception.
+     */
+    @Test
+    void cacheableWithResult_WithNullKey_ShouldThrowIllegalStateException() {
+        String cacheName = "testCache";
+        Supplier<String> loader = () -> "value";
+        Duration ttl = Duration.ofMinutes(10);
+
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> cacheService.cacheableWithResult(cacheName, null, loader, ttl));
+        assertEquals("key is required", exception.getMessage());
+    }
+
+    /**
+     * Cacheable with result with null loader should throw illegal state exception.
+     */
+    @Test
+    void cacheableWithResult_WithNullLoader_ShouldThrowIllegalStateException() {
+        String cacheName = "testCache";
+        String key = "testKey";
+        Duration ttl = Duration.ofMinutes(10);
+
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> cacheService.cacheableWithResult(cacheName, key, null, ttl));
+        assertEquals("loader is required", exception.getMessage());
+    }
+
+    /**
+     * Cacheable with result with null ttl should throw illegal state exception.
+     */
+    @Test
+    void cacheableWithResult_WithNullTtl_ShouldThrowIllegalStateException() {
+        String cacheName = "testCache";
+        String key = "testKey";
+        Supplier<String> loader = () -> "value";
+
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> cacheService.cacheableWithResult(cacheName, key, loader, null));
+        assertEquals("ttl is required", exception.getMessage());
+    }
+
+    /**
+     * Cacheable with result when cache hit should return cache hit result.
+     */
+    @Test
+    void cacheableWithResult_WhenCacheHit_ShouldReturnCacheHitResult() {
+        String cacheName = "users";
+        String key = "user1";
+        String cachedValue = "John Doe";
+        Supplier<String> loader = () -> "Jane Doe";
+
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get("users:user1")).thenReturn(cachedValue);
+
+        CacheResult<String> result = cacheService.cacheableWithResult(cacheName, key, loader,
+                Duration.ofMinutes(10));
+
+        assertEquals(cachedValue, result.getValue());
+        assertTrue(result.isCacheHit());
+        assertFalse(result.isCacheMiss());
+        verify(valueOperations).get("users:user1");
+        verify(valueOperations, never()).set(anyString(), any(), any(Duration.class));
+    }
+
+    /**
+     * Cacheable with result when cache miss should return cache miss result.
+     */
+    @Test
+    void cacheableWithResult_WhenCacheMiss_ShouldReturnCacheMissResult() {
+        String cacheName = "users";
+        String key = "user1";
+        String loadedValue = "Jane Doe";
+        Supplier<String> loader = () -> loadedValue;
+        Duration ttl = Duration.ofMinutes(10);
+
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get("users:user1")).thenReturn(null);
+
+        CacheResult<String> result = cacheService.cacheableWithResult(cacheName, key, loader, ttl);
+
+        assertEquals(loadedValue, result.getValue());
+        assertFalse(result.isCacheHit());
+        assertTrue(result.isCacheMiss());
+        verify(valueOperations).get("users:user1");
+        verify(valueOperations).set("users:user1", loadedValue, ttl);
+    }
+
+    /**
+     * Cacheable with result when loader returns null should not cache.
+     */
+    @Test
+    void cacheableWithResult_WhenLoaderReturnsNull_ShouldNotCache() {
+        String cacheName = "users";
+        String key = "user1";
+        Supplier<String> loader = () -> null;
+        Duration ttl = Duration.ofMinutes(10);
+
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get("users:user1")).thenReturn(null);
+
+        CacheResult<String> result = cacheService.cacheableWithResult(cacheName, key, loader, ttl);
+
+        assertNull(result.getValue());
+        assertTrue(result.isCacheMiss());
+        verify(valueOperations).get("users:user1");
+        verify(valueOperations, never()).set(anyString(), any(), any(Duration.class));
+    }
+
+    /**
+     * Cacheable with result with default ttl should use 10 minutes.
+     */
+    @Test
+    void cacheableWithResult_WithDefaultTtl_ShouldUse10Minutes() {
+        String cacheName = "users";
+        String key = "user1";
+        String loadedValue = "Jane Doe";
+        Supplier<String> loader = () -> loadedValue;
+
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get("users:user1")).thenReturn(null);
+
+        CacheResult<String> result = cacheService.cacheableWithResult(cacheName, key, loader);
+
+        assertEquals(loadedValue, result.getValue());
+        assertTrue(result.isCacheMiss());
+        verify(valueOperations).set("users:user1", loadedValue, Duration.ofMinutes(10));
+    }
+
+    /**
+     * Cacheable with result when redis throws exception should fallback to loader.
+     */
+    @Test
+    void cacheableWithResult_WhenRedisThrowsException_ShouldFallbackToLoader() {
+        String cacheName = "users";
+        String key = "user1";
+        String loadedValue = "Jane Doe";
+        Supplier<String> loader = () -> loadedValue;
+
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get("users:user1")).thenThrow(new RuntimeException("Redis error"));
+
+        CacheResult<String> result = cacheService.cacheableWithResult(cacheName, key, loader,
+                Duration.ofMinutes(10));
+
+        assertEquals(loadedValue, result.getValue());
+        assertTrue(result.isCacheMiss());
         verify(valueOperations).get("users:user1");
     }
 
