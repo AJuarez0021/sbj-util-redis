@@ -814,4 +814,154 @@ class RedisCacheServiceTest {
 
         verify(redisTemplate, never()).delete(anyList());
     }
+
+    /**
+     * Cache put with null cache name should throw exception.
+     */
+    @Test
+    void cachePut_WithNullCacheName_ShouldThrowException() {
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> cacheService.cachePut(null, "key", () -> "value", Duration.ofMinutes(10)));
+        assertEquals("cacheName is required", exception.getMessage());
+    }
+
+    /**
+     * Cache put with null key should throw exception.
+     */
+    @Test
+    void cachePut_WithNullKey_ShouldThrowException() {
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> cacheService.cachePut("cache", null, () -> "value", Duration.ofMinutes(10)));
+        assertEquals("key is required", exception.getMessage());
+    }
+
+    /**
+     * Cache put with null loader should throw exception.
+     */
+    @Test
+    void cachePut_WithNullLoader_ShouldThrowException() {
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> cacheService.cachePut("cache", "key", null, Duration.ofMinutes(10)));
+        assertEquals("loader is required", exception.getMessage());
+    }
+
+    /**
+     * Cache evict with null cache name should throw exception.
+     */
+    @Test
+    void cacheEvict_WithNullCacheName_ShouldThrowException() {
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> cacheService.cacheEvict(null, "key"));
+        assertEquals("cacheName is required", exception.getMessage());
+    }
+
+    /**
+     * Cache evict with null key should throw exception.
+     */
+    @Test
+    void cacheEvict_WithNullKey_ShouldThrowException() {
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> cacheService.cacheEvict("cache", null));
+        assertEquals("key is required", exception.getMessage());
+    }
+
+    /**
+     * Cache evict all with null cache name should throw exception.
+     */
+    @Test
+    void cacheEvictAll_WithNullCacheName_ShouldThrowException() {
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> cacheService.cacheEvictAll(null));
+        assertEquals("cacheName is required", exception.getMessage());
+    }
+
+    /**
+     * Cache evict all with empty cache name should throw exception.
+     */
+    @Test
+    void cacheEvictAll_WithEmptyCacheName_ShouldThrowException() {
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> cacheService.cacheEvictAll(""));
+        assertEquals("cacheName is required", exception.getMessage());
+    }
+
+    /**
+     * Cache evict multiple with null cache name should throw exception.
+     */
+    @Test
+    void cacheEvictMultiple_WithNullCacheName_ShouldThrowException() {
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> cacheService.cacheEvictMultiple(null, "key1", "key2"));
+        assertEquals("cacheName is required", exception.getMessage());
+    }
+
+    /**
+     * Cache evict multiple with null element in keys array should throw exception.
+     */
+    @Test
+    void cacheEvictMultiple_WithNullElementInArray_ShouldThrowException() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> cacheService.cacheEvictMultiple("users", "key1", null, "key3"));
+        assertEquals("keys array cannot contain null elements", exception.getMessage());
+    }
+
+    /**
+     * Cache evict by pattern with null pattern should throw exception.
+     */
+    @Test
+    void cacheEvictByPattern_WithNullPattern_ShouldThrowException() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> cacheService.cacheEvictByPattern(null));
+        assertEquals("pattern is required", exception.getMessage());
+    }
+
+    /**
+     * Cache evict by pattern with empty pattern should throw exception.
+     */
+    @Test
+    void cacheEvictByPattern_WithEmptyPattern_ShouldThrowException() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> cacheService.cacheEvictByPattern(""));
+        assertEquals("pattern is required", exception.getMessage());
+    }
+
+    /**
+     * Exists with null cache name should throw exception.
+     */
+    @Test
+    void exists_WithNullCacheName_ShouldThrowException() {
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> cacheService.exists(null, "key"));
+        assertEquals("cacheName is required", exception.getMessage());
+    }
+
+    /**
+     * Exists with null key should throw exception.
+     */
+    @Test
+    void exists_WithNullKey_ShouldThrowException() {
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> cacheService.exists("cache", null));
+        assertEquals("key is required", exception.getMessage());
+    }
+
+    /**
+     * Get TT L with null cache name should throw exception.
+     */
+    @Test
+    void getTTL_WithNullCacheName_ShouldThrowException() {
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> cacheService.getTTL(null, "key"));
+        assertEquals("cacheName is required", exception.getMessage());
+    }
+
+    /**
+     * Get TT L with null key should throw exception.
+     */
+    @Test
+    void getTTL_WithNullKey_ShouldThrowException() {
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> cacheService.getTTL("cache", null));
+        assertEquals("key is required", exception.getMessage());
+    }
 }

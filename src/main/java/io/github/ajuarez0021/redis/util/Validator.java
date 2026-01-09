@@ -180,6 +180,49 @@ public final class Validator {
     }
 
     /**
+     * Validate cache name for evict all operations.
+     *
+     * @param cacheName the cache name
+     */
+    public static void validateCacheEvictAll(String cacheName) {
+        if (!StringUtils.hasText(cacheName)) {
+            throw new IllegalStateException("cacheName is required");
+        }
+        if (cacheName.contains(":") || cacheName.contains("*")) {
+            throw new IllegalArgumentException(
+                    "cacheName cannot contain ':' or '*' characters"
+            );
+        }
+    }
+
+    /**
+     * Validate cache name for evict multiple operations.
+     *
+     * @param cacheName the cache name
+     */
+    public static void validateCacheEvictMultiple(String cacheName) {
+        if (!StringUtils.hasText(cacheName)) {
+            throw new IllegalStateException("cacheName is required");
+        }
+        if (cacheName.contains(":") || cacheName.contains("*")) {
+            throw new IllegalArgumentException(
+                    "cacheName cannot contain ':' or '*' characters"
+            );
+        }
+    }
+
+    /**
+     * Validate pattern for evict by pattern operations.
+     *
+     * @param pattern the pattern
+     */
+    public static void validatePattern(String pattern) {
+        if (!StringUtils.hasText(pattern)) {
+            throw new IllegalArgumentException("pattern is required");
+        }
+    }
+
+    /**
      * Validate key format.
      *
      * @param cacheName the cache name

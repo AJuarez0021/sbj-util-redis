@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
@@ -140,6 +141,8 @@ public class RedisCacheService {
      * @return the object
      */
     public <T> T cachePut(String cacheName, String key, Supplier<T> loader, Duration ttl) {
+        Validator.validateCacheable(cacheName, key, loader, ttl);
+
         String fullKey = buildKey(cacheName, key);
         boolean wasLoaded = false;
         T result = null;
@@ -186,6 +189,8 @@ public class RedisCacheService {
      * @param key the key
      */
     public void cacheEvict(String cacheName, String key) {
+        Validator.validateCacheEvict(cacheName, key);
+
         String fullKey = buildKey(cacheName, key);
 
         try {
@@ -209,6 +214,8 @@ public class RedisCacheService {
      * @param cacheName the cache name
      */
     public void cacheEvictAll(String cacheName) {
+        Validator.validateCacheEvictAll(cacheName);
+
         String pattern = cacheName + ":*";
         try {
             AtomicLong deletedCount = new AtomicLong(0);
@@ -256,9 +263,15 @@ public class RedisCacheService {
      * @param keys the keys
      */
     public void cacheEvictMultiple(String cacheName, String... keys) {
+        Validator.validateCacheEvictMultiple(cacheName);
+
         if (keys == null || keys.length == 0) {
             log.debug("No keys to evict");
             return;
+        }
+
+        if (Arrays.stream(keys).anyMatch(Objects::isNull)) {
+            throw new IllegalArgumentException("keys array cannot contain null elements");
         }
 
         List<String> fullKeys = Arrays.stream(keys)
@@ -282,6 +295,8 @@ public class RedisCacheService {
      * @param pattern the pattern
      */
     public void cacheEvictByPattern(String pattern) {
+        Validator.validatePattern(pattern);
+
         try {
             AtomicLong deletedCount = new AtomicLong(0);
 
@@ -329,6 +344,8 @@ public class RedisCacheService {
      * @return true, if successful
      */
     public boolean exists(String cacheName, String key) {
+        Validator.validateCacheEvict(cacheName, key);
+
         String fullKey = buildKey(cacheName, key);
 
         try {
@@ -347,6 +364,8 @@ public class RedisCacheService {
      * @return the ttl
      */
     public Long getTTL(String cacheName, String key) {
+        Validator.validateCacheEvict(cacheName, key);
+
         String fullKey = buildKey(cacheName, key);
 
         try {
