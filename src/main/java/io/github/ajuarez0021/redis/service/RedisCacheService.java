@@ -214,7 +214,7 @@ public class RedisCacheService {
      * @param cacheName the cache name
      */
     public void cacheEvictAll(String cacheName) {
-        Validator.validateCacheEvictAll(cacheName);
+        Validator.validateCacheEvict(cacheName);
 
         String pattern = cacheName + ":*";
         try {
@@ -263,7 +263,7 @@ public class RedisCacheService {
      * @param keys the keys
      */
     public void cacheEvictMultiple(String cacheName, String... keys) {
-        Validator.validateCacheEvictMultiple(cacheName);
+        Validator.validateCacheEvict(cacheName);
 
         if (keys == null || keys.length == 0) {
             log.debug("No keys to evict");

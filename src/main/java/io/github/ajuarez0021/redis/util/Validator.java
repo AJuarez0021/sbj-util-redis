@@ -184,23 +184,7 @@ public final class Validator {
      *
      * @param cacheName the cache name
      */
-    public static void validateCacheEvictAll(String cacheName) {
-        if (!StringUtils.hasText(cacheName)) {
-            throw new IllegalStateException("cacheName is required");
-        }
-        if (cacheName.contains(":") || cacheName.contains("*")) {
-            throw new IllegalArgumentException(
-                    "cacheName cannot contain ':' or '*' characters"
-            );
-        }
-    }
-
-    /**
-     * Validate cache name for evict multiple operations.
-     *
-     * @param cacheName the cache name
-     */
-    public static void validateCacheEvictMultiple(String cacheName) {
+    public static void validateCacheEvict(String cacheName) {
         if (!StringUtils.hasText(cacheName)) {
             throw new IllegalStateException("cacheName is required");
         }

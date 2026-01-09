@@ -597,7 +597,7 @@ class ValidatorTest {
     @Test
     void validateCacheEvictAll_WithNullCacheName_ShouldThrowException() {
         IllegalStateException exception = assertThrows(IllegalStateException.class,
-                () -> Validator.validateCacheEvictAll(null));
+                () -> Validator.validateCacheEvict(null));
         assertEquals("cacheName is required", exception.getMessage());
     }
 
@@ -607,7 +607,7 @@ class ValidatorTest {
     @Test
     void validateCacheEvictAll_WithEmptyCacheName_ShouldThrowException() {
         IllegalStateException exception = assertThrows(IllegalStateException.class,
-                () -> Validator.validateCacheEvictAll(""));
+                () -> Validator.validateCacheEvict(""));
         assertEquals("cacheName is required", exception.getMessage());
     }
 
@@ -617,7 +617,7 @@ class ValidatorTest {
     @Test
     void validateCacheEvictAll_WithWhitespaceCacheName_ShouldThrowException() {
         IllegalStateException exception = assertThrows(IllegalStateException.class,
-                () -> Validator.validateCacheEvictAll("   "));
+                () -> Validator.validateCacheEvict("   "));
         assertEquals("cacheName is required", exception.getMessage());
     }
 
@@ -627,7 +627,7 @@ class ValidatorTest {
     @Test
     void validateCacheEvictAll_WithCacheNameContainingColon_ShouldThrowException() {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-                () -> Validator.validateCacheEvictAll("cache:name"));
+                () -> Validator.validateCacheEvict("cache:name"));
         assertEquals("cacheName cannot contain ':' or '*' characters", exception.getMessage());
     }
 
@@ -637,7 +637,7 @@ class ValidatorTest {
     @Test
     void validateCacheEvictAll_WithCacheNameContainingAsterisk_ShouldThrowException() {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-                () -> Validator.validateCacheEvictAll("cache*name"));
+                () -> Validator.validateCacheEvict("cache*name"));
         assertEquals("cacheName cannot contain ':' or '*' characters", exception.getMessage());
     }
 
@@ -646,65 +646,7 @@ class ValidatorTest {
      */
     @Test
     void validateCacheEvictAll_WithValidCacheName_ShouldNotThrowException() {
-        assertDoesNotThrow(() -> Validator.validateCacheEvictAll("cache"));
-    }
-
-    /**
-     * Validate cache evict multiple with null cache name should throw exception.
-     */
-    @Test
-    void validateCacheEvictMultiple_WithNullCacheName_ShouldThrowException() {
-        IllegalStateException exception = assertThrows(IllegalStateException.class,
-                () -> Validator.validateCacheEvictMultiple(null));
-        assertEquals("cacheName is required", exception.getMessage());
-    }
-
-    /**
-     * Validate cache evict multiple with empty cache name should throw exception.
-     */
-    @Test
-    void validateCacheEvictMultiple_WithEmptyCacheName_ShouldThrowException() {
-        IllegalStateException exception = assertThrows(IllegalStateException.class,
-                () -> Validator.validateCacheEvictMultiple(""));
-        assertEquals("cacheName is required", exception.getMessage());
-    }
-
-    /**
-     * Validate cache evict multiple with whitespace cache name should throw exception.
-     */
-    @Test
-    void validateCacheEvictMultiple_WithWhitespaceCacheName_ShouldThrowException() {
-        IllegalStateException exception = assertThrows(IllegalStateException.class,
-                () -> Validator.validateCacheEvictMultiple("   "));
-        assertEquals("cacheName is required", exception.getMessage());
-    }
-
-    /**
-     * Validate cache evict multiple with cache name containing colon should throw exception.
-     */
-    @Test
-    void validateCacheEvictMultiple_WithCacheNameContainingColon_ShouldThrowException() {
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-                () -> Validator.validateCacheEvictMultiple("cache:name"));
-        assertEquals("cacheName cannot contain ':' or '*' characters", exception.getMessage());
-    }
-
-    /**
-     * Validate cache evict multiple with cache name containing asterisk should throw exception.
-     */
-    @Test
-    void validateCacheEvictMultiple_WithCacheNameContainingAsterisk_ShouldThrowException() {
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-                () -> Validator.validateCacheEvictMultiple("cache*name"));
-        assertEquals("cacheName cannot contain ':' or '*' characters", exception.getMessage());
-    }
-
-    /**
-     * Validate cache evict multiple with valid cache name should not throw exception.
-     */
-    @Test
-    void validateCacheEvictMultiple_WithValidCacheName_ShouldNotThrowException() {
-        assertDoesNotThrow(() -> Validator.validateCacheEvictMultiple("cache"));
+        assertDoesNotThrow(() -> Validator.validateCacheEvict("cache"));
     }
 
     /**
