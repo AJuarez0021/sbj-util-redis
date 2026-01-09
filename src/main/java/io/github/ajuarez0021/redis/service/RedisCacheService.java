@@ -208,31 +208,37 @@ public class RedisCacheService {
     public void cacheEvictAll(String cacheName) {
         String pattern = cacheName + ":*";
         try {
-            redisTemplate.execute((RedisCallback<Void>) connection -> {
+            List<String> allKeys = redisTemplate.execute((RedisCallback<List<String>>) connection -> {
                 ScanOptions options = ScanOptions.scanOptions()
                         .match(pattern)
                         .count(100)
                         .build();
 
+                List<String> keys = new ArrayList<>();
                 try(Cursor<byte[]> cursor = connection.keyCommands().scan(options)) {
-                    List<String> keysToDelete = new ArrayList<>();
-
                     while (cursor.hasNext()) {
-                        keysToDelete.add(new String(cursor.next(), StandardCharsets.UTF_8));
-
-                        if (keysToDelete.size() >= 100) {
-                            redisTemplate.delete(keysToDelete);
-                            keysToDelete.clear();
-                        }
-                    }
-
-                    if (!keysToDelete.isEmpty()) {
-                        redisTemplate.delete(keysToDelete);
+                        keys.add(new String(cursor.next(), StandardCharsets.UTF_8));
                     }
                 }
-                return null;
+                return keys;
             });
-            log.debug("Cache EVICTED ALL - Pattern: {}", pattern);
+
+            if (allKeys != null && !allKeys.isEmpty()) {
+                List<String> batch = new ArrayList<>();
+                for (String key : allKeys) {
+                    batch.add(key);
+                    if (batch.size() >= 100) {
+                        redisTemplate.delete(batch);
+                        batch.clear();
+                    }
+                }
+                if (!batch.isEmpty()) {
+                    redisTemplate.delete(batch);
+                }
+            }
+
+            log.debug("Cache EVICTED ALL - Pattern: {}, Count: {}",
+                    pattern, allKeys != null ? allKeys.size() : 0);
         } catch (Exception e) {
             log.error("Error evicting all entries for cache {}: {}", cacheName, e.getMessage());
         }
@@ -245,6 +251,11 @@ public class RedisCacheService {
      * @param keys the keys
      */
     public void cacheEvictMultiple(String cacheName, String... keys) {
+        if (keys == null || keys.length == 0) {
+            log.debug("No keys to evict");
+            return;
+        }
+
         List<String> fullKeys = Arrays.stream(keys)
                 .map(key -> buildKey(cacheName, key))
                 .toList();
@@ -264,32 +275,37 @@ public class RedisCacheService {
      */
     public void cacheEvictByPattern(String pattern) {
         try {
-            redisTemplate.execute((RedisCallback<Void>) connection -> {
+            List<String> allKeys = redisTemplate.execute((RedisCallback<List<String>>) connection -> {
                 ScanOptions options = ScanOptions.scanOptions()
                         .match(pattern)
                         .count(100)
                         .build();
 
+                List<String> keys = new ArrayList<>();
                 try(Cursor<byte[]> cursor = connection.keyCommands().scan(options)) {
-                    List<String> keysToDelete = new ArrayList<>();
-
                     while (cursor.hasNext()) {
-                        keysToDelete.add(new String(cursor.next(), StandardCharsets.UTF_8));
-
-                        if (keysToDelete.size() >= 100) {
-                            redisTemplate.delete(keysToDelete);
-                            keysToDelete.clear();
-                        }
-                    }
-
-                    if (!keysToDelete.isEmpty()) {
-                        redisTemplate.delete(keysToDelete);
+                        keys.add(new String(cursor.next(), StandardCharsets.UTF_8));
                     }
                 }
-                return null;
+                return keys;
             });
 
-            log.debug("Cache EVICTED BY PATTERN - Pattern: {}", pattern);
+            if (allKeys != null && !allKeys.isEmpty()) {
+                List<String> batch = new ArrayList<>();
+                for (String key : allKeys) {
+                    batch.add(key);
+                    if (batch.size() >= 100) {
+                        redisTemplate.delete(batch);
+                        batch.clear();
+                    }
+                }
+                if (!batch.isEmpty()) {
+                    redisTemplate.delete(batch);
+                }
+            }
+
+            log.debug("Cache EVICTED BY PATTERN - Pattern: {}, Count: {}",
+                    pattern, allKeys != null ? allKeys.size() : 0);
         } catch (Exception e) {
             log.error("Error evicting by pattern {}: {}", pattern, e.getMessage());
         }

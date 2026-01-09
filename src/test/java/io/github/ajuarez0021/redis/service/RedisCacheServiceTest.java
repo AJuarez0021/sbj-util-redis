@@ -791,17 +791,27 @@ class RedisCacheServiceTest {
     }
 
     /**
-     * Cache evict multiple with empty keys should call delete with empty list.
+     * Cache evict multiple with empty keys should not call redis.
      */
     @Test
-    void cacheEvictMultiple_WithEmptyKeys_ShouldCallDeleteWithEmptyList() {
+    void cacheEvictMultiple_WithEmptyKeys_ShouldNotCallRedis() {
         String cacheName = "users";
         String[] keys = {};
 
-        when(redisTemplate.delete(anyList())).thenReturn(0L);
-
         cacheService.cacheEvictMultiple(cacheName, keys);
 
-        verify(redisTemplate).delete(anyList());
+        verify(redisTemplate, never()).delete(anyList());
+    }
+
+    /**
+     * Cache evict multiple with null keys should not call redis.
+     */
+    @Test
+    void cacheEvictMultiple_WithNullKeys_ShouldNotCallRedis() {
+        String cacheName = "users";
+
+        cacheService.cacheEvictMultiple(cacheName, (String[]) null);
+
+        verify(redisTemplate, never()).delete(anyList());
     }
 }

@@ -512,4 +512,82 @@ class ValidatorTest {
         assertDoesNotThrow(() -> Validator.validateCacheable("cache", "key", loader,
                 Duration.ofMinutes(10)));
     }
+
+    /**
+     * Validate cache evict with null cache name should throw exception.
+     */
+    @Test
+    void validateCacheEvict_WithNullCacheName_ShouldThrowException() {
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> Validator.validateCacheEvict(null, "key"));
+        assertEquals("cacheName is required", exception.getMessage());
+    }
+
+    /**
+     * Validate cache evict with empty cache name should throw exception.
+     */
+    @Test
+    void validateCacheEvict_WithEmptyCacheName_ShouldThrowException() {
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> Validator.validateCacheEvict("", "key"));
+        assertEquals("cacheName is required", exception.getMessage());
+    }
+
+    /**
+     * Validate cache evict with null key should throw exception.
+     */
+    @Test
+    void validateCacheEvict_WithNullKey_ShouldThrowException() {
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> Validator.validateCacheEvict("cache", null));
+        assertEquals("key is required", exception.getMessage());
+    }
+
+    /**
+     * Validate cache evict with empty key should throw exception.
+     */
+    @Test
+    void validateCacheEvict_WithEmptyKey_ShouldThrowException() {
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> Validator.validateCacheEvict("cache", ""));
+        assertEquals("key is required", exception.getMessage());
+    }
+
+    /**
+     * Validate cache evict with cache name containing colon should throw exception.
+     */
+    @Test
+    void validateCacheEvict_WithCacheNameContainingColon_ShouldThrowException() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> Validator.validateCacheEvict("cache:name", "key"));
+        assertEquals("cacheName cannot contain ':' or '*' characters", exception.getMessage());
+    }
+
+    /**
+     * Validate cache evict with cache name containing asterisk should throw exception.
+     */
+    @Test
+    void validateCacheEvict_WithCacheNameContainingAsterisk_ShouldThrowException() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> Validator.validateCacheEvict("cache*name", "key"));
+        assertEquals("cacheName cannot contain ':' or '*' characters", exception.getMessage());
+    }
+
+    /**
+     * Validate cache evict with key containing asterisk should throw exception.
+     */
+    @Test
+    void validateCacheEvict_WithKeyContainingAsterisk_ShouldThrowException() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> Validator.validateCacheEvict("cache", "key*value"));
+        assertEquals("key cannot contain '*' character", exception.getMessage());
+    }
+
+    /**
+     * Validate cache evict with valid params should not throw exception.
+     */
+    @Test
+    void validateCacheEvict_WithValidParams_ShouldNotThrowException() {
+        assertDoesNotThrow(() -> Validator.validateCacheEvict("cache", "key"));
+    }
 }

@@ -151,7 +151,17 @@ public final class CacheOperationBuilder<T> {
     /**
      * Cacheable.
      *
-     * @return the t
+     * <p><b>Callback Behavior:</b></p>
+     * <ul>
+     *   <li>If {@code condition} is false, the loader is executed directly
+     *       and NO callbacks (onHit/onMiss) are invoked.</li>
+     *   <li>If {@code condition} is true and cache hit occurs: {@code onHit} callback is invoked
+     *       (if provided).</li>
+     *   <li>If {@code condition} is true and cache miss occurs: {@code onMiss} callback is invoked
+     *       (if provided).</li>
+     * </ul>
+     *
+     * @return the cached or loaded value
      */
     public T cacheable() {
         Validator.validateRequiredFields(cacheName, key, loader);
@@ -187,6 +197,7 @@ public final class CacheOperationBuilder<T> {
      * Cache evict.
      */
     public void cacheEvict() {
+        Validator.validateCacheEvict(cacheName, key);
         cacheService.cacheEvict(cacheName, key);
     }
 

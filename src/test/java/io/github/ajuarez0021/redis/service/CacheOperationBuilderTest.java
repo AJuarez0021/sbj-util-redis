@@ -419,4 +419,38 @@ class CacheOperationBuilderTest {
 
                 verify(cacheService).cacheableWithResult(anyString(), anyString(), any(), any(Duration.class));
         }
+
+        /**
+         * Cache evict without cache name should throw exception.
+         */
+        @Test
+        void cacheEvict_WithoutCacheName_ShouldThrowException() {
+                IllegalStateException exception = assertThrows(IllegalStateException.class,
+                        () -> builder.key("key1").cacheEvict());
+
+                assertEquals("cacheName is required", exception.getMessage());
+                verify(cacheService, never()).cacheEvict(anyString(), anyString());
+        }
+
+        /**
+         * Cache evict without key should throw exception.
+         */
+        @Test
+        void cacheEvict_WithoutKey_ShouldThrowException() {
+                IllegalStateException exception = assertThrows(IllegalStateException.class,
+                        () -> builder.cacheName("cache").cacheEvict());
+
+                assertEquals("key is required", exception.getMessage());
+                verify(cacheService, never()).cacheEvict(anyString(), anyString());
+        }
+
+        /**
+         * Cache evict with valid params should succeed.
+         */
+        @Test
+        void cacheEvict_WithValidParams_ShouldSucceed() {
+                assertDoesNotThrow(() -> builder.cacheName("cache").key("key1").cacheEvict());
+
+                verify(cacheService).cacheEvict("cache", "key1");
+        }
 }

@@ -164,6 +164,22 @@ public final class Validator {
     }
 
     /**
+     * Validate cache evict parameters.
+     *
+     * @param cacheName the cache name
+     * @param key the key
+     */
+    public static void validateCacheEvict(String cacheName, String key) {
+        if (!StringUtils.hasText(cacheName)) {
+            throw new IllegalStateException("cacheName is required");
+        }
+        if (!StringUtils.hasText(key)) {
+            throw new IllegalStateException("key is required");
+        }
+        validateKeyFormat(cacheName, key);
+    }
+
+    /**
      * Validate key format.
      *
      * @param cacheName the cache name
