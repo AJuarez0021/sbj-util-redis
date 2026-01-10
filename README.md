@@ -217,6 +217,8 @@ The `@EnableRedisLibrary` annotation supports the following parameters:
 )
 ```
 
+**Note:** `@TTLEntry` configurations only apply to Spring's **`@Cacheable` annotation**. For programmatic cache operations using `RedisCacheService` (such as `cacheable()`, `cachePut()`, etc.), you must explicitly specify the TTL as a parameter in the method call.
+
 ### Custom ObjectMapper Configuration
 
 Create a custom configuration class:
