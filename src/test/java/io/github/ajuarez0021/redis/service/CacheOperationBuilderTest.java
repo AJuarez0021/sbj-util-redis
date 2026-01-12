@@ -453,4 +453,53 @@ class CacheOperationBuilderTest {
 
                 verify(cacheService).cacheEvict("cache", "key1");
         }
+
+        /**
+         * Cache evict all should delegate to service.
+         */
+        @Test
+        void cacheEvictAll_ShouldDelegateToService() {
+                String cacheName = "testCache";
+
+                builder.cacheName(cacheName)
+                                .cacheEvictAll();
+
+                verify(cacheService).cacheEvictAll(cacheName);
+        }
+
+        /**
+         * Cache evict all without cache name should throw exception.
+         */
+        @Test
+        void cacheEvictAll_WithoutCacheName_ShouldThrowException() {
+                IllegalStateException exception = assertThrows(IllegalStateException.class,
+                        () -> builder.cacheEvictAll());
+
+                assertEquals("cacheName is required", exception.getMessage());
+                verify(cacheService, never()).cacheEvictAll(anyString());
+        }
+
+        /**
+         * Cache evict all with valid params should succeed.
+         */
+        @Test
+        void cacheEvictAll_WithValidParams_ShouldSucceed() {
+                assertDoesNotThrow(() -> builder.cacheName("cache").cacheEvictAll());
+
+                verify(cacheService).cacheEvictAll("cache");
+        }
+
+        /**
+         * Cache evict all with key set should ignore key.
+         */
+        @Test
+        void cacheEvictAll_WithKeySet_ShouldIgnoreKey() {
+                String cacheName = "testCache";
+
+                builder.cacheName(cacheName)
+                                .key("ignoredKey") // Key is not needed for evictAll
+                                .cacheEvictAll();
+
+                verify(cacheService).cacheEvictAll(cacheName);
+        }
 }

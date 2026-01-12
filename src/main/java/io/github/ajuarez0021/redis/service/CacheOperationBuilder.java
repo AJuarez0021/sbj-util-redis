@@ -202,6 +202,19 @@ public final class CacheOperationBuilder<T> {
     }
 
     /**
+     * Cache evict all entries for the specified cache name.
+     *
+     * <p>Equivalent to {@code @CacheEvict(allEntries = true)}. This method deletes
+     * all keys matching the pattern {@code cacheName:*}. It uses SCAN to iterate
+     * through keys and deletes them in batches to avoid loading all keys into memory
+     * at once, which prevents {@code OutOfMemoryError} when dealing with large datasets.</p>
+     */
+    public void cacheEvictAll() {
+        Validator.validateCacheEvict(cacheName);
+        cacheService.cacheEvictAll(cacheName);
+    }
+
+    /**
      * Factory for creating {@link CacheOperationBuilder} instances.
      *
      * <p>This factory provides a thread-safe way to obtain new builder instances.

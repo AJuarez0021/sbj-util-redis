@@ -367,6 +367,7 @@ Builder Methods:
 - `cacheable()`: Execute as cacheable operation
 - `cachePut()`: Execute as cache put operation
 - `cacheEvict()`: Execute as cache evict operation
+- `cacheEvictAll()`: Execute as cache evict all operation (removes all entries for the cache name)
 
 ### Health Checking
 
