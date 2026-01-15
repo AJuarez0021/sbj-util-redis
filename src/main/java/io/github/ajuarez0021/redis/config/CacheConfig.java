@@ -3,6 +3,7 @@ package io.github.ajuarez0021.redis.config;
 import io.github.ajuarez0021.redis.annotation.EnableRedisLibrary;
 import io.github.ajuarez0021.redis.dto.HostsDto;
 import io.github.ajuarez0021.redis.service.CacheOperationBuilder;
+import io.github.ajuarez0021.redis.service.CoalesceCacheManager;
 import io.github.ajuarez0021.redis.service.RedisCacheService;
 import io.github.ajuarez0021.redis.service.RedisHealthChecker;
 import io.github.ajuarez0021.redis.util.Mode;
@@ -35,6 +36,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 
 
 /**
@@ -45,6 +48,7 @@ import java.util.Objects;
 @Configuration
 @EnableCaching
 @Slf4j
+@ComponentScan(basePackages = {"io.github.ajuarez0021.redis.config", "io.github.ajuarez0021.redis.aspect"})
 public class CacheConfig implements ImportAware {
 
     /**
@@ -57,6 +61,33 @@ public class CacheConfig implements ImportAware {
      */
     private AnnotationAttributes attributes;
 
+    /**
+     * Coalesce Cache Manager.
+     * 
+     * @param redisTemplate The redis template
+     * @param redisMessageListener The message listener
+     * @return The CoalesceCacheManager object 
+     */
+    @Bean
+    CoalesceCacheManager coalesceCacheManager(RedisTemplate<String, Object> redisTemplate,
+            RedisMessageListenerContainer redisMessageListener) {
+        return new CoalesceCacheManager(redisTemplate, redisMessageListener);
+    }
+
+    /**
+     * Redis Message Listener.
+     * 
+     * @param connectionFactory The connection factory
+     * @return The redis message listener
+     */
+    @Bean
+    RedisMessageListenerContainer redisMessageListenerContainer(
+            RedisConnectionFactory connectionFactory) {
+        RedisMessageListenerContainer container = new RedisMessageListenerContainer();
+        container.setConnectionFactory(connectionFactory);
+        return container;
+    }
+    
     /**
      * Redis health checker.
      *
