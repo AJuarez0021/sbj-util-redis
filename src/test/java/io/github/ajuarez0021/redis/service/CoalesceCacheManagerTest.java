@@ -85,9 +85,9 @@ class CoalesceCacheManagerTest {
         cacheManager.put(key, value, ttlSeconds);
 
         verify(valueOperations).set(
-                eq("coalesce:cache:testKey"),
-                eq(value),
-                eq(Duration.ofSeconds(ttlSeconds)));
+                "coalesce:cache:testKey",
+                value,
+                Duration.ofSeconds(ttlSeconds));
     }
 
     /**
@@ -103,8 +103,8 @@ class CoalesceCacheManagerTest {
         cacheManager.put(key, value, ttlSeconds);
 
         verify(valueOperations).set(
-                eq("coalesce:cache:testKey"),
-                eq(value));
+                "coalesce:cache:testKey",
+                value);
     }
 
     /**
@@ -120,8 +120,8 @@ class CoalesceCacheManagerTest {
         cacheManager.put(key, value, ttlSeconds);
 
         verify(valueOperations).set(
-                eq("coalesce:cache:testKey"),
-                eq(value));
+                "coalesce:cache:testKey",
+                value);
     }
 
     /**
@@ -425,8 +425,8 @@ class CoalesceCacheManagerTest {
         cacheManager.expire(key, ttlSeconds);
 
         verify(redisTemplate).expire(
-                eq("coalesce:cache:testKey"),
-                eq(Duration.ofSeconds(ttlSeconds)));
+                "coalesce:cache:testKey",
+                Duration.ofSeconds(ttlSeconds));
     }
 
 }

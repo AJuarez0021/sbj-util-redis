@@ -4,7 +4,6 @@ import io.github.ajuarez0021.redis.dto.HostsDto;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;

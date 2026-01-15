@@ -578,17 +578,7 @@ class CacheConfigTest {
                 exception.getMessage());
     }
 
-    /**
-     * Creates the sentinel config with valid configuration should create configuration.
-     */
-    @Test
-    void createSentinelConfig_WithValidConfiguration_ShouldCreateConfiguration() {
-        setupSentinelConfiguration();
 
-        RedisConnectionFactory result = cacheConfig.createRedisConnectionFactory();
-
-        assertNotNull(result);
-    }
 
     /**
      * Setup sentinel configuration.

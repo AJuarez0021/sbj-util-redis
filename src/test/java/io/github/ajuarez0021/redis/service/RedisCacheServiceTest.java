@@ -831,7 +831,7 @@ class RedisCacheServiceTest {
     @Test
     void cachePut_WithNullKey_ShouldThrowException() {
         IllegalStateException exception = assertThrows(IllegalStateException.class,
-                () -> cacheService.cachePut("cache", null, () -> "value", Duration.ofMinutes(10)));
+                () -> cacheService.cachePut("cache", null, () -> "value", Duration.ofMinutes(1)));
         assertEquals("key is required", exception.getMessage());
     }
 
