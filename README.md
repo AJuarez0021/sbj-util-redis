@@ -423,7 +423,6 @@ public class UserService {
         value = "users",           // Cache name/prefix
         key = "#userId",           // SpEL expression for dynamic key
         ttl = 300,                 // TTL in seconds (5 minutes)
-        timeout = 5000,            // Coalescing timeout in milliseconds
         condition = "#userId != null",  // SpEL condition for caching
         cacheNull = false,         // Whether to cache null results
         coalesce = true            // Enable request coalescing
