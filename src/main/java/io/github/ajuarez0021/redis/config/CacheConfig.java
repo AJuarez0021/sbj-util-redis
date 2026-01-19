@@ -1,6 +1,7 @@
 package io.github.ajuarez0021.redis.config;
 
 import io.github.ajuarez0021.redis.annotation.EnableRedisLibrary;
+import io.github.ajuarez0021.redis.aspect.CoalesceCachingAspect;
 import io.github.ajuarez0021.redis.dto.HostsDto;
 import io.github.ajuarez0021.redis.service.CacheOperationBuilder;
 import io.github.ajuarez0021.redis.service.CoalesceCacheManager;
@@ -14,6 +15,7 @@ import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.context.annotation.ImportAware;
 import org.springframework.core.annotation.AnnotationAttributes;
 import org.springframework.core.type.AnnotationMetadata;
@@ -47,8 +49,9 @@ import org.springframework.data.redis.listener.RedisMessageListenerContainer;
  */
 @Configuration
 @EnableCaching
+@EnableAspectJAutoProxy
 @Slf4j
-@ComponentScan(basePackages = {"io.github.ajuarez0021.redis.config", "io.github.ajuarez0021.redis.aspect"})
+@ComponentScan(basePackages = {"io.github.ajuarez0021.redis.config"})
 public class CacheConfig implements ImportAware {
 
     /**
@@ -72,6 +75,17 @@ public class CacheConfig implements ImportAware {
     CoalesceCacheManager coalesceCacheManager(RedisTemplate<String, Object> redisTemplate,
             RedisMessageListenerContainer redisMessageListener) {
         return new CoalesceCacheManager(redisTemplate, redisMessageListener);
+    }
+
+    /**
+     * Coalesce Aspect.
+     *
+     * @param cacheManager The cache manager
+     * @return The CoalesceCachingAspect object
+     */
+    @Bean
+    CoalesceCachingAspect coalesceCachingAspect(CoalesceCacheManager cacheManager) {
+        return new CoalesceCachingAspect(cacheManager);
     }
 
     /**

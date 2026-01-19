@@ -4,9 +4,12 @@ import io.github.ajuarez0021.redis.annotation.CoalesceCacheable;
 import io.github.ajuarez0021.redis.annotation.CoalesceCaching;
 import io.github.ajuarez0021.redis.annotation.CoalesceEvict;
 import io.github.ajuarez0021.redis.annotation.CoalescePut;
+import io.github.ajuarez0021.redis.exception.CoalesceException;
 import io.github.ajuarez0021.redis.service.CoalesceCacheManager;
 import java.util.Arrays;
 import org.springframework.expression.Expression;
+
+import java.util.Objects;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -16,7 +19,6 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.core.annotation.Order;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
-import org.springframework.stereotype.Component;
 
 /**
  * The Class CoalesceCachingAspect.
@@ -24,7 +26,6 @@ import org.springframework.stereotype.Component;
  * @author ajuar
  */
 @Aspect
-@Component
 @Slf4j
 @Order(1)
 public class CoalesceCachingAspect {
@@ -44,6 +45,59 @@ public class CoalesceCachingAspect {
             CoalesceCacheManager cacheManager) {
         this.cacheManager = cacheManager;
         this.parser = new SpelExpressionParser();
+        log.debug("CoalesceCachingAspect");
+    }
+
+    /**
+     * Handle cacheable.
+     *
+     * @param joinPoint the join point
+     * @param cacheable the cacheable annotation
+     * @return the object
+     * @throws Throwable the throwable
+     */
+    @Around("@annotation(cacheable)")
+    public Object handleCacheable(
+            ProceedingJoinPoint joinPoint,
+            CoalesceCacheable cacheable) throws Throwable {
+
+
+        if (!evaluateCondition(joinPoint, cacheable.condition())) {
+            log.debug("Condition not met for @CoalesceCacheable, skipping cache");
+            return joinPoint.proceed();
+        }
+
+        String cacheKey = generateCacheKey(joinPoint, cacheable);
+
+
+        Optional<Object> cached = cacheManager.get(cacheKey);
+        if (cached.isPresent()) {
+            log.debug("Returning cached value for key: {}", cacheKey);
+            return cached.get();
+        }
+
+
+        if (!cacheable.coalesce()) {
+            Object result = joinPoint.proceed();
+            if (result != null || cacheable.cacheNull()) {
+                cacheManager.put(cacheKey, result, cacheable.ttl());
+            }
+            return result;
+        }
+
+
+        return cacheManager.getOrLoad(
+                cacheKey,
+                () -> {
+                    try {
+                        return joinPoint.proceed();
+                    } catch (Throwable t) {
+                        throw new CoalesceException(t);
+                    }
+                },
+                cacheable.ttl(),
+                cacheable.cacheNull()
+        );
     }
 
     /**
@@ -60,8 +114,12 @@ public class CoalesceCachingAspect {
             CoalesceCaching caching) throws Throwable {
 
         CoalesceCacheable[] cacheables = caching.cacheable();
+
         if (cacheables.length > 0) {
             for (CoalesceCacheable cacheable : cacheables) {
+                if (!evaluateCondition(joinPoint, cacheable.condition())) {
+                    continue;
+                }
                 String cacheKey = generateCacheKey(joinPoint, cacheable);
                 Optional<Object> cached = cacheManager.get(cacheKey);
                 if (cached.isPresent()) {
@@ -87,7 +145,7 @@ public class CoalesceCachingAspect {
 
                 String cacheKey = generateCacheKey(joinPoint, put);
                 cacheManager.put(cacheKey, result, put.ttl());
-                log.info("Cached result from @CoalesceCaching for key: {}", cacheKey);
+                log.debug("Cached result from @CoalesceCaching for key: {}", cacheKey);
             }
         }
 
@@ -98,6 +156,9 @@ public class CoalesceCachingAspect {
         }
 
         for (CoalesceCacheable cacheable : cacheables) {
+            if (!evaluateCondition(joinPoint, cacheable.condition())) {
+                continue;
+            }
             String cacheKey = generateCacheKey(joinPoint, cacheable);
             if (result != null || cacheable.cacheNull()) {
                 cacheManager.put(cacheKey, result, cacheable.ttl());
@@ -217,7 +278,7 @@ public class CoalesceCachingAspect {
             return true;
         }
 
-        return evaluateExpression(joinPoint, condition, result, Boolean.class);
+        return Objects.nonNull(evaluateExpression(joinPoint, condition, result, Boolean.class));
     }
 
     /**

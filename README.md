@@ -13,6 +13,8 @@ A powerful and flexible Spring Boot utility library for Redis integration, provi
   - [Basic Cache Operations](#basic-cache-operations)
   - [Advanced Cache Operations](#advanced-cache-operations)
   - [Health Checking](#health-checking)
+  - [Request Coalescing](#request-coalescing-high-concurrency-caching)
+- [Caching Approaches Comparison](#caching-approaches-comparison)
 - [Security](#-security)
 - [Thread Safety](#-thread-safety)
 - [API Reference](#-api-reference)
@@ -34,6 +36,7 @@ A powerful and flexible Spring Boot utility library for Redis integration, provi
 - **Robust Validation**: Comprehensive parameter validation with descriptive error messages
 - **Error Handling**: Graceful error handling with fallback mechanisms
 - **High Test Coverage**: 85%+ code coverage with comprehensive unit tests
+- **Request Coalescing**: AOP-based annotations for high-concurrency scenarios with automatic request deduplication
 
 ## Requirements
 
@@ -49,7 +52,7 @@ Add the dependency to your `pom.xml`:
 <dependency>
     <groupId>io.github.ajuarez0021.redis</groupId>
     <artifactId>sbj-util-redis</artifactId>
-    <version>1.0.3</version>
+    <version>1.0.4</version>
 </dependency>
 ```
 
@@ -406,6 +409,101 @@ The health checker provides comprehensive metrics including:
 - **connectedClients**: Number of connected clients
 - **redisVersion**: Redis server version
 
+### Request Coalescing (High-Concurrency Caching)
+
+For high-concurrency scenarios where multiple threads may request the same data simultaneously, use the coalesce annotations:
+
+#### @CoalesceCacheable
+
+```java
+@Service
+public class UserService {
+
+    @CoalesceCacheable(
+        value = "users",           // Cache name/prefix
+        key = "#userId",           // SpEL expression for dynamic key
+        ttl = 300,                 // TTL in seconds (5 minutes)
+        timeout = 5000,            // Coalescing timeout in milliseconds
+        condition = "#userId != null",  // SpEL condition for caching
+        cacheNull = false,         // Whether to cache null results
+        coalesce = true            // Enable request coalescing
+    )
+    public User getUserById(String userId) {
+        return userRepository.findById(userId);
+    }
+}
+```
+
+#### @CoalescePut
+
+```java
+@CoalescePut(value = "users", key = "#user.id", ttl = 300)
+public User updateUser(User user) {
+    return userRepository.save(user);
+}
+```
+
+#### @CoalesceEvict
+
+```java
+@CoalesceEvict(value = "users", key = "#userId")
+public void deleteUser(String userId) {
+    userRepository.deleteById(userId);
+}
+
+// Evict all entries in the cache
+@CoalesceEvict(value = "users", allEntries = true)
+public void clearAllUsers() {
+    // This will evict all entries with the "users" prefix
+}
+```
+
+#### @CoalesceCaching (Multiple Operations)
+
+```java
+@CoalesceCaching(
+    cacheable = @CoalesceCacheable(value = "users", key = "#userId"),
+    evict = @CoalesceEvict(value = "userSessions", key = "#userId")
+)
+public User refreshUser(String userId) {
+    return userRepository.findById(userId);
+}
+```
+
+**Key Features:**
+- **Request Coalescing**: Multiple concurrent requests for the same key are coalesced, executing the underlying method only once
+- **SpEL Support**: Dynamic key generation using Spring Expression Language
+- **Distributed Eviction**: Cache eviction events are published via Redis pub/sub to notify all application instances
+- **Separate Cache Namespace**: Uses `coalesce:cache:` prefix to avoid conflicts with standard caching
+
+**When to Use Coalesce Annotations:**
+- Methods with expensive operations (database queries, external API calls)
+- High-concurrency scenarios where multiple threads may request the same data simultaneously
+- Need for SpEL-based dynamic key generation
+- Distributed applications requiring cache eviction synchronization across instances
+
+## Caching Approaches Comparison
+
+The library provides **three different caching approaches** - choose based on your use case:
+
+| Approach | Use Case | Features | Thread Safety |
+|----------|----------|----------|---------------|
+| **RedisCacheService** | Programmatic caching with full control | Direct API calls, custom TTL, eviction patterns, callback support via builder | Thread-safe singleton |
+| **Spring @Cacheable** | Standard Spring declarative caching | Standard Spring Cache abstraction, TTL via `@TTLEntry`, works with any cache provider | Thread-safe |
+| **@CoalesceCacheable** | High-concurrency scenarios with request coalescing | SpEL-based keys, request coalescing, distributed eviction via pub/sub, conditional caching | Thread-safe |
+
+**Decision Matrix:**
+- **Need programmatic control or callbacks?** Use `RedisCacheService` or `CacheOperationBuilder`
+- **Standard Spring caching with minimal configuration?** Use `@Cacheable` with `@TTLEntry`
+- **High concurrency + expensive operations + need SpEL?** Use `@CoalesceCacheable`
+- **Distributed eviction across instances?** Use `@CoalesceEvict` (publishes to Redis pub/sub)
+- **Dynamic conditional caching at runtime?** Use `CacheOperationBuilder.condition()` or `@CoalesceCacheable(condition=...)`
+
+**Cache Key Namespaces:**
+- `RedisCacheService`: `{cacheName}:{key}`
+- Spring `@Cacheable`: Configured via `RedisCacheManager` (default: `{cacheName}::{key}`)
+- `@CoalesceCacheable`: `coalesce:cache:{value}:{key}`
+
 ## Security
 
 ### SSL/TLS Encryption
@@ -714,6 +812,8 @@ public class HealthController {
 - **CacheOperationBuilder**: Fluent API for advanced operations
 - **RedisHealthChecker**: Health monitoring service
 - **ObjectMapperConfig**: Interface for custom JSON serialization
+- **CoalesceCacheManager**: Dedicated cache manager for request coalescing with pub/sub support
+- **@CoalesceCacheable/@CoalescePut/@CoalesceEvict**: AOP annotations for high-concurrency caching
 
 ### Connection Modes
 
@@ -785,7 +885,7 @@ Contributions, issues, and feature requests are welcome!
 ## Project Stats
 
 - **Test Coverage**: 85%+ code coverage
-- **Total Tests**: 115 unit tests
+- **Total Tests**: 260+ unit tests
 - **Build Status**: All tests passing
 - **Thread Safety**: Fully verified
 - **Supported Modes**: Standalone, Cluster, Sentinel

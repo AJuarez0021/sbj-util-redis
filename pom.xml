@@ -117,6 +117,7 @@
                         <configuration>
                             <excludes>
                                 <exclude>io/github/ajuarez0021/redis/dto/**</exclude>
+                                <exclude>io/github/ajuarez0021/redis/exception/**</exclude>
                             </excludes>
                             <outputDirectory>target/jacoco-report</outputDirectory>
                             <rules>

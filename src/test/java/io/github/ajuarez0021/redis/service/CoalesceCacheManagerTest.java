@@ -11,7 +11,10 @@ import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 
+import io.github.ajuarez0021.redis.dto.CoalescedResponseDto;
+import io.github.ajuarez0021.redis.dto.EvictionEventDto;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -19,6 +22,14 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
+import org.springframework.data.redis.connection.Message;
+import org.springframework.data.redis.serializer.RedisSerializer;
+import org.springframework.data.redis.serializer.SerializationException;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -63,11 +74,11 @@ class CoalesceCacheManagerTest {
     }
 
     /**
-     * Constructor should register message listener.
+     * Constructor should register message listeners.
      */
     @Test
-    void constructor_ShouldRegisterMessageListener() {
-        verify(listenerContainer).addMessageListener(
+    void constructor_ShouldRegisterMessageListeners() {
+        verify(listenerContainer, times(2)).addMessageListener(
                 any(),
                 any(ChannelTopic.class));
     }
@@ -427,6 +438,371 @@ class CoalesceCacheManagerTest {
         verify(redisTemplate).expire(
                 "coalesce:cache:testKey",
                 Duration.ofSeconds(ttlSeconds));
+    }
+
+
+    /**
+     * GetOrLoad when cache hit should return cached value.
+     */
+    @Test
+    void getOrLoad_WhenCacheHit_ShouldReturnCachedValue() {
+        setupValueOperations();
+        String key = "testKey";
+        Object expectedValue = "cachedValue";
+        Supplier<Object> loader = () -> "loadedValue";
+
+        when(valueOperations.get("coalesce:cache:testKey")).thenReturn(expectedValue);
+
+        Object result = cacheManager.getOrLoad(key, loader, 300, false);
+
+        assertEquals(expectedValue, result);
+        verify(valueOperations).get("coalesce:cache:testKey");
+        verify(valueOperations, never()).setIfAbsent(anyString(), any(), any(Duration.class));
+    }
+
+    /**
+     * GetOrLoad when lock acquired should execute loader and cache result.
+     */
+    @Test
+    void getOrLoad_WhenLockAcquired_ShouldExecuteLoaderAndCacheResult() {
+        setupValueOperations();
+        String key = "testKey";
+        Object loadedValue = "loadedValue";
+        Supplier<Object> loader = () -> loadedValue;
+
+        when(valueOperations.get("coalesce:cache:testKey")).thenReturn(null);
+        when(valueOperations.setIfAbsent(
+                eq("coalesce:lock:testKey"),
+                anyString(),
+                eq(Duration.ofSeconds(30)))).thenReturn(true);
+        when(redisTemplate.delete("coalesce:lock:testKey")).thenReturn(true);
+
+        Object result = cacheManager.getOrLoad(key, loader, 300, false);
+
+        assertEquals(loadedValue, result);
+        verify(valueOperations).set(
+                eq("coalesce:cache:testKey"),
+                eq(loadedValue),
+                eq(Duration.ofSeconds(300)));
+        verify(redisTemplate).convertAndSend(eq("coalesce:ready"), any(CoalescedResponseDto.class));
+        verify(redisTemplate).delete("coalesce:lock:testKey");
+    }
+
+    /**
+     * GetOrLoad when loader returns null and cacheNull is true should cache null.
+     */
+    @Test
+    void getOrLoad_WhenLoaderReturnsNullAndCacheNullTrue_ShouldCacheNull() {
+        setupValueOperations();
+        String key = "testKey";
+        Supplier<Object> loader = () -> null;
+
+        when(valueOperations.get("coalesce:cache:testKey")).thenReturn(null);
+        when(valueOperations.setIfAbsent(
+                eq("coalesce:lock:testKey"),
+                anyString(),
+                eq(Duration.ofSeconds(30)))).thenReturn(true);
+        when(redisTemplate.delete("coalesce:lock:testKey")).thenReturn(true);
+
+        Object result = cacheManager.getOrLoad(key, loader, 300, true);
+
+        assertNull(result);
+        verify(valueOperations).set(
+                eq("coalesce:cache:testKey"),
+                isNull(),
+                eq(Duration.ofSeconds(300)));
+        verify(redisTemplate).delete("coalesce:lock:testKey");
+    }
+
+    /**
+     * GetOrLoad when loader returns null and cacheNull is false should not cache.
+     */
+    @Test
+    void getOrLoad_WhenLoaderReturnsNullAndCacheNullFalse_ShouldNotCache() {
+        setupValueOperations();
+        String key = "testKey";
+        Supplier<Object> loader = () -> null;
+
+        when(valueOperations.get("coalesce:cache:testKey")).thenReturn(null);
+        when(valueOperations.setIfAbsent(
+                eq("coalesce:lock:testKey"),
+                anyString(),
+                eq(Duration.ofSeconds(30)))).thenReturn(true);
+        when(redisTemplate.delete("coalesce:lock:testKey")).thenReturn(true);
+
+        Object result = cacheManager.getOrLoad(key, loader, 300, false);
+
+        assertNull(result);
+        verify(valueOperations, never()).set(
+                eq("coalesce:cache:testKey"),
+                any(),
+                any(Duration.class));
+        verify(redisTemplate).delete("coalesce:lock:testKey");
+    }
+
+    /**
+     * GetOrLoad when loader throws exception should publish error and rethrow.
+     */
+    @Test
+    void getOrLoad_WhenLoaderThrowsException_ShouldPublishErrorAndRethrow() {
+        setupValueOperations();
+        String key = "testKey";
+        RuntimeException expectedException = new RuntimeException("Loader failed");
+        Supplier<Object> loader = () -> {
+            throw expectedException;
+        };
+
+        when(valueOperations.get("coalesce:cache:testKey")).thenReturn(null);
+        when(valueOperations.setIfAbsent(
+                eq("coalesce:lock:testKey"),
+                anyString(),
+                eq(Duration.ofSeconds(30)))).thenReturn(true);
+        when(redisTemplate.delete("coalesce:lock:testKey")).thenReturn(true);
+
+        RuntimeException thrown = assertThrows(RuntimeException.class,
+                () -> cacheManager.getOrLoad(key, loader, 300, false));
+
+        assertEquals(expectedException, thrown);
+        verify(redisTemplate).convertAndSend(eq("coalesce:ready"), any(CoalescedResponseDto.class));
+        verify(redisTemplate).delete("coalesce:lock:testKey");
+    }
+
+    /**
+     * GetOrLoad when lock not acquired should wait for result.
+     */
+    @Test
+    void getOrLoad_WhenLockNotAcquired_ShouldThrowOnTimeout() {
+        setupValueOperations();
+        String key = "testKey";
+        Supplier<Object> loader = () -> "loadedValue";
+
+        when(valueOperations.get("coalesce:cache:testKey")).thenReturn(null);
+        when(valueOperations.setIfAbsent(
+                eq("coalesce:lock:testKey"),
+                anyString(),
+                eq(Duration.ofSeconds(30)))).thenReturn(false);
+
+        assertThrows(RuntimeException.class,
+                () -> cacheManager.getOrLoad(key, loader, 1, false));
+    }
+
+    /**
+     * GetOrLoad when lock not acquired and cache populated should return cached value.
+     */
+    @Test
+    void getOrLoad_WhenLockNotAcquiredAndCachePopulated_ShouldReturnCachedValue() {
+        setupValueOperations();
+        String key = "testKey";
+        Object cachedValue = "cachedByOtherInstance";
+        Supplier<Object> loader = () -> "loadedValue";
+
+        when(valueOperations.get("coalesce:cache:testKey"))
+                .thenReturn(null)
+                .thenReturn(cachedValue);
+        when(valueOperations.setIfAbsent(
+                eq("coalesce:lock:testKey"),
+                anyString(),
+                eq(Duration.ofSeconds(30)))).thenReturn(false);
+
+        Object result = cacheManager.getOrLoad(key, loader, 1, false);
+
+        assertEquals(cachedValue, result);
+    }
+
+    /**
+     * GetOrLoad with zero TTL should use default timeout.
+     */
+    @Test
+    void getOrLoad_WithZeroTTL_ShouldUseDefaultTimeout() {
+        setupValueOperations();
+        String key = "testKey";
+        Object loadedValue = "loadedValue";
+        Supplier<Object> loader = () -> loadedValue;
+
+        when(valueOperations.get("coalesce:cache:testKey")).thenReturn(null);
+        when(valueOperations.setIfAbsent(
+                eq("coalesce:lock:testKey"),
+                anyString(),
+                eq(Duration.ofSeconds(30)))).thenReturn(true);
+        when(redisTemplate.delete("coalesce:lock:testKey")).thenReturn(true);
+
+        Object result = cacheManager.getOrLoad(key, loader, 0, false);
+
+        assertEquals(loadedValue, result);
+        verify(valueOperations).set("coalesce:cache:testKey", loadedValue);
+    }
+
+
+    /**
+     * HandleCoalesceEvent with successful response should complete future.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void handleCoalesceEvent_WithSuccessResponse_ShouldCompleteFuture() throws Exception {
+        String key = "testKey";
+        Object expectedResult = "result";
+        CoalescedResponseDto response = new CoalescedResponseDto(
+                "requestId", key, expectedResult, null, LocalDateTime.now());
+
+        Message message = mock(Message.class);
+        RedisSerializer<Object> serializer = mock(RedisSerializer.class);
+        doReturn(serializer).when(redisTemplate).getValueSerializer();
+        doReturn(response).when(serializer).deserialize(any());
+
+        CompletableFuture<Object> future = new CompletableFuture<>();
+        ConcurrentHashMap<String, CompletableFuture<Object>> pendingRequests = getPendingRequests();
+        pendingRequests.put(key, future);
+
+        invokeHandleCoalesceEvent(message, null);
+
+        assertTrue(future.isDone());
+        assertEquals(expectedResult, future.get());
+    }
+
+    /**
+     * HandleCoalesceEvent with error response should complete exceptionally.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void handleCoalesceEvent_WithErrorResponse_ShouldCompleteExceptionally() throws Exception {
+        String key = "testKey";
+        RuntimeException error = new RuntimeException("Test error");
+        CoalescedResponseDto response = new CoalescedResponseDto(
+                "requestId", key, null, error, LocalDateTime.now());
+
+        Message message = mock(Message.class);
+        RedisSerializer<Object> serializer = mock(RedisSerializer.class);
+        doReturn(serializer).when(redisTemplate).getValueSerializer();
+        doReturn(response).when(serializer).deserialize(any());
+
+        CompletableFuture<Object> future = new CompletableFuture<>();
+        ConcurrentHashMap<String, CompletableFuture<Object>> pendingRequests = getPendingRequests();
+        pendingRequests.put(key, future);
+
+        invokeHandleCoalesceEvent(message, null);
+
+        assertTrue(future.isCompletedExceptionally());
+    }
+
+    /**
+     * HandleCoalesceEvent with null response should not throw.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void handleCoalesceEvent_WithNullResponse_ShouldNotThrow() throws Exception {
+        Message message = mock(Message.class);
+        RedisSerializer<Object> serializer = mock(RedisSerializer.class);
+        doReturn(serializer).when(redisTemplate).getValueSerializer();
+        doReturn(null).when(serializer).deserialize(any());
+
+        assertDoesNotThrow(() -> invokeHandleCoalesceEvent(message, null));
+    }
+
+    /**
+     * HandleCoalesceEvent with no pending future should not throw.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void handleCoalesceEvent_WithNoPendingFuture_ShouldNotThrow() throws Exception {
+        String key = "nonExistentKey";
+        CoalescedResponseDto response = new CoalescedResponseDto(
+                "requestId", key, "result", null, LocalDateTime.now());
+
+        Message message = mock(Message.class);
+        RedisSerializer<Object> serializer = mock(RedisSerializer.class);
+        doReturn(serializer).when(redisTemplate).getValueSerializer();
+        doReturn(response).when(serializer).deserialize(any());
+
+        assertDoesNotThrow(() -> invokeHandleCoalesceEvent(message, null));
+    }
+
+    /**
+     * HandleCoalesceEvent with serialization exception should not throw.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void handleCoalesceEvent_WithSerializationException_ShouldNotThrow() throws Exception {
+        Message message = mock(Message.class);
+        RedisSerializer<Object> serializer = mock(RedisSerializer.class);
+        doReturn(serializer).when(redisTemplate).getValueSerializer();
+        doThrow(new SerializationException("Test")).when(serializer).deserialize(any());
+
+        assertDoesNotThrow(() -> invokeHandleCoalesceEvent(message, null));
+    }
+
+
+    /**
+     * HandleEvictionEvent with valid event should not throw.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void handleEvictionEvent_WithValidEvent_ShouldNotThrow() throws Exception {
+        EvictionEventDto event = new EvictionEventDto("testKey", LocalDateTime.now());
+
+        Message message = mock(Message.class);
+        RedisSerializer<Object> serializer = mock(RedisSerializer.class);
+        doReturn(serializer).when(redisTemplate).getValueSerializer();
+        doReturn(event).when(serializer).deserialize(any());
+
+        assertDoesNotThrow(() -> invokeHandleEvictionEvent(message, null));
+    }
+
+    /**
+     * HandleEvictionEvent with null event should not throw.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void handleEvictionEvent_WithNullEvent_ShouldNotThrow() throws Exception {
+        Message message = mock(Message.class);
+        RedisSerializer<Object> serializer = mock(RedisSerializer.class);
+        doReturn(serializer).when(redisTemplate).getValueSerializer();
+        doReturn(null).when(serializer).deserialize(any());
+
+        assertDoesNotThrow(() -> invokeHandleEvictionEvent(message, null));
+    }
+
+    /**
+     * HandleEvictionEvent with serialization exception should not throw.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void handleEvictionEvent_WithSerializationException_ShouldNotThrow() throws Exception {
+        Message message = mock(Message.class);
+        RedisSerializer<Object> serializer = mock(RedisSerializer.class);
+        doReturn(serializer).when(redisTemplate).getValueSerializer();
+        doThrow(new SerializationException("Test")).when(serializer).deserialize(any());
+
+        assertDoesNotThrow(() -> invokeHandleEvictionEvent(message, null));
+    }
+
+    /**
+     * Gets pending requests map via reflection.
+     */
+    @SuppressWarnings("unchecked")
+    private ConcurrentHashMap<String, CompletableFuture<Object>> getPendingRequests() throws Exception {
+        Field field = CoalesceCacheManager.class.getDeclaredField("pendingRequests");
+        field.setAccessible(true);
+        return (ConcurrentHashMap<String, CompletableFuture<Object>>) field.get(cacheManager);
+    }
+
+    /**
+     * Invokes handleCoalesceEvent via reflection.
+     */
+    private void invokeHandleCoalesceEvent(Message message, byte[] pattern) throws Exception {
+        Method method = CoalesceCacheManager.class.getDeclaredMethod(
+                "handleCoalesceEvent", Message.class, byte[].class);
+        method.setAccessible(true);
+        method.invoke(cacheManager, message, pattern);
+    }
+
+    /**
+     * Invokes handleEvictionEvent via reflection.
+     */
+    private void invokeHandleEvictionEvent(Message message, byte[] pattern) throws Exception {
+        Method method = CoalesceCacheManager.class.getDeclaredMethod(
+                "handleEvictionEvent", Message.class, byte[].class);
+        method.setAccessible(true);
+        method.invoke(cacheManager, message, pattern);
     }
 
 }

@@ -31,13 +31,7 @@ public @interface CoalesceCacheable {
      * @return the string
      */
     String key() default "";
-    
-    /**
-     * Tiempo de espera máximo en milisegundos para coalescing.
-     *
-     * @return the long
-     */
-    long timeout() default 5000;
+
     
     /**
      * Tiempo de expiración en segundos.
